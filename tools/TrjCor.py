@@ -22,7 +22,7 @@ from skimage import io
 __author__ = 'Vitaliy Starchenko'
 
 
-class CheckTrjCor(pt.AbstractBaseTool):
+class TrjCor(pt.AbstractBaseTool):
     '''
     This tool does a trajectory correction on a small piece of data 50 in Z
     direction. The processing and result will be in directory `testTrjCor`.
@@ -31,10 +31,10 @@ class CheckTrjCor(pt.AbstractBaseTool):
     '''
     
     def __init__(self):
-        self.__toolName__ = 'checkTrajCor'
+        self.__toolName__ = 'trajCor'
         
         # hardcoded directory and file names
-        self.__testDir__ = 'testTrjCor'
+        self.__resDir__ = 'trjCor'
         self.__voidsfile__ = 'cropdata'
         
         # an array of parameters for current generator
@@ -44,18 +44,28 @@ class CheckTrjCor(pt.AbstractBaseTool):
         self.parameters.append(
             ['inputDir', 'beforeCrop', 'directory with initial files']
         )
+        
+        # if needed to check correctness quickly z1 and z2 will define a slice
+        # to analyze. If at least one is -1 then analyzing the whole image.
+        self.parameters.append(
+            ['z1', -1, 'lower Z position in slice']
+        )
+        self.parameters.append(
+            ['z2', -1, 'higher Z position in slice']
+        )
+        
         self.parameters.append(
             ['classModel', 'wekaModel', 'directory with classifier files']
         )
     
     def phase1(self, inputDir):
-        os.makedirs(self.__testDir__)
+        os.makedirs(self.__resDir__)
         # dirrectory for voids
-        voids_dir = os.path.join(self.__testDir__, 'voids')
+        voids_dir = os.path.join(self.__resDir__, 'voids')
         os.makedirs(voids_dir)
     
         # make initial directory with small datafiled (50 in Z)
-        iniDir = os.path.join(self.__testDir__, 'ini')
+        iniDir = os.path.join(self.__resDir__, 'ini')
         os.makedirs(iniDir)
     
         tif_files = sorted([f for f in os.listdir(inputDir)
@@ -137,7 +147,7 @@ class CheckTrjCor(pt.AbstractBaseTool):
         wekaModel = 'weka.model'
         wekaclassifierpath = os.path.join(wekaDir, wekaModel)
         
-        voids_dir = os.path.join(self.__testDir__, 'voids')
+        voids_dir = os.path.join(self.__resDir__, 'voids')
 
         dirs = [d for d in os.listdir(voids_dir) if
                 (os.path.isdir(os.path.join(voids_dir, d)) and
@@ -156,7 +166,7 @@ class CheckTrjCor(pt.AbstractBaseTool):
             process = subprocess.call(bashCommand, shell=True)
             
     def phase3(self):
-        voids_dir = os.path.join(self.__testDir__, 'voids')
+        voids_dir = os.path.join(self.__resDir__, 'voids')
     
         # choose only seg voids to clean
         dirs = [d for d in os.listdir(voids_dir) if
@@ -247,7 +257,7 @@ class CheckTrjCor(pt.AbstractBaseTool):
     
             void_dir = "seg_{}".format(key)
             
-            cur_dir = os.path.join(self.__testDir__, 'voids', void_dir)
+            cur_dir = os.path.join(self.__resDir__, 'voids', void_dir)
         
             tif_files = sorted([f for f in os.listdir(cur_dir)])
         
@@ -407,7 +417,7 @@ class CheckTrjCor(pt.AbstractBaseTool):
         # initial position of cropped part
         cropfile = self.__voidsfile__
         # directory to process. should be the same number of files for time
-        datadir = os.path.join(self.__testDir__, 'ini')
+        datadir = os.path.join(self.__resDir__, 'ini')
     
         resdir = '{}_TR'.format(datadir)
         os.makedirs(resdir)
@@ -530,13 +540,13 @@ class CheckTrjCor(pt.AbstractBaseTool):
             io.imsave(savef, res, plugin='tifffile')
         
     def phase6(self):
-        path_ini = os.path.join(self.__testDir__, 'ini_TR')
+        path_ini = os.path.join(self.__resDir__, 'ini_TR')
         temp_data_dir = "{}_tmp_split".format(path_ini)
         os.mkdir(temp_data_dir)
         temp_data_dir_filtered = "{}_filtered".format(temp_data_dir)
         os.mkdir(temp_data_dir_filtered)
     
-        path_res = os.path.join(self.__testDir__, 'ini_TR_BP')
+        path_res = os.path.join(self.__resDir__, 'ini_TR_BP')
         os.mkdir(path_res)
     
         data_files = sorted([f for f in os.listdir(path_ini) if
@@ -618,7 +628,7 @@ class CheckTrjCor(pt.AbstractBaseTool):
         # file to be segmented
         #path_file_ini = os.path.join(self.__testDir__, 'ini_TR_BP', '02_run06_0015min_trsmd_filtered.tif')
 
-        path_file_iniDir = os.path.join(self.__testDir__, 'ini_TR_BP')
+        path_file_iniDir = os.path.join(self.__resDir__, 'ini_TR_BP')
 
         tif_files_from_ini = sorted([f for f in os.listdir(path_file_iniDir)
                                   if (os.path.isfile(
@@ -627,7 +637,7 @@ class CheckTrjCor(pt.AbstractBaseTool):
         path_file_ini = os.path.join(path_file_iniDir, tif_files_from_ini[0])
 
         # a directory where result should be stored
-        path_res = os.path.join(self.__testDir__, 'ini_TR_BP_cl0')
+        path_res = os.path.join(self.__resDir__, 'ini_TR_BP_cl0')
         # number of pieces to split the tomo data
         
         # model file
@@ -841,8 +851,8 @@ class CheckTrjCor(pt.AbstractBaseTool):
 
     
     def phase8(self):
-        dir_path = os.path.join(self.__testDir__, 'ini_TR_BP_cl0')
-        res_path = os.path.join(self.__testDir__, 'ini_TR_BP_cl0_cl')
+        dir_path = os.path.join(self.__resDir__, 'ini_TR_BP_cl0')
+        res_path = os.path.join(self.__resDir__, 'ini_TR_BP_cl0_cl')
         
         os.mkdir(res_path)
 
@@ -888,7 +898,7 @@ class CheckTrjCor(pt.AbstractBaseTool):
             io.imsave(file_res, im_bin, plugin='tifffile')
             
     def phase9(self):
-        dir_path = os.path.join(self.__testDir__, 'ini_TR_BP')
+        dir_path = os.path.join(self.__resDir__, 'ini_TR_BP')
     
         resdir = '{}_subtr'.format(dir_path)
         os.mkdir(resdir)
@@ -897,7 +907,7 @@ class CheckTrjCor(pt.AbstractBaseTool):
                             if (os.path.isfile(
                 os.path.join(dir_path, f)) and ".tif" in f)])
 
-        time0fileDir = os.path.join(self.__testDir__, 'ini_TR_BP_cl0_cl')
+        time0fileDir = os.path.join(self.__resDir__, 'ini_TR_BP_cl0_cl')
         
         tif_files_from0 = sorted([f for f in os.listdir(time0fileDir)
                             if (os.path.isfile(
