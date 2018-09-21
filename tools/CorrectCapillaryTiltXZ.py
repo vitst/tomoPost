@@ -10,7 +10,7 @@ __author__ = 'Vitaliy Starchenko'
 class CorrectCapillaryTiltXZ(pt.AbstractBaseTool):
     '''
     This tool corrects the tilt of the capillary in the direction defined
-    by XZ plane.
+    by axis.
     '''
     
     def __init__(self):
@@ -28,6 +28,9 @@ class CorrectCapillaryTiltXZ(pt.AbstractBaseTool):
                                              'with corrected tilt']
         )
         self.parameters.append(
+            ['rotAxis', 'y', 'the axis of rotation: x, y, z']
+        )
+        self.parameters.append(
             ['angle', '0.5', 'the angle to correct the tilt']
         )
 
@@ -37,7 +40,20 @@ class CorrectCapillaryTiltXZ(pt.AbstractBaseTool):
         lines = self.read_dict(dictFileName)
         empty, inputDir, description = self.check_a_parameter('inputDir', lines)
         empty, outputDir, description = self.check_a_parameter('outputDir', lines)
+        empty, axis, description = self.check_a_parameter('rotAxis', lines)
         empty, angle, description = self.check_a_parameter('angle', lines)
+        
+        # image orientation as usual ZYX
+        if axis == "x":
+            rotationAxis = (0, 1)
+        elif axis == "y":
+            rotationAxis = (0, 2)
+        elif axis == "z":
+            rotationAxis = (1, 2)
+        else:
+            print("Wrong value of rotational axis: {}\n"
+                  "Please check the dictionary file.")
+            exit(2)
         
         angle = float(angle)
         os.makedirs(outputDir)
@@ -55,7 +71,7 @@ class CorrectCapillaryTiltXZ(pt.AbstractBaseTool):
             stack_tif = io.imread(filen, plugin='tifffile')
     
             stack_tif = ndimage.interpolation.rotate(stack_tif, angle,
-                            axes=(0, 1), reshape=False, output=None, order=3,
+                            axes=rotationAxis, reshape=False, output=None, order=3,
                             mode='constant', cval=0.0, prefilter=True)
     
             resultFilename = os.path.splitext(filename)[0]

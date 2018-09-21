@@ -24,8 +24,8 @@ __author__ = 'Vitaliy Starchenko'
 
 class TrjCor(pt.AbstractBaseTool):
     '''
-    This tool does a trajectory correction on a small piece of data 50 in Z
-    direction. The processing and result will be in directory `testTrjCor`.
+    This tool does a trajectory correction. The processing and result
+    will be in directory `trajCor`.
     The tilt should be already fixed and the image should be cropped at this
     point.
     '''
@@ -58,7 +58,7 @@ class TrjCor(pt.AbstractBaseTool):
             ['classModel', 'wekaModel', 'directory with classifier files']
         )
     
-    def phase1(self, inputDir):
+    def phase1(self, inputDir, z1, z2):
         os.makedirs(self.__resDir__)
         # dirrectory for voids
         voids_dir = os.path.join(self.__resDir__, 'voids')
@@ -85,22 +85,21 @@ class TrjCor(pt.AbstractBaseTool):
                     (value[4] - value[1]) <= 0 or \
                     (value[3] - value[0]) <= 0:
                 print(' *** Error. Void coordinates are wrong, check {} file'.
-                      format(self.__voidsfile__))
+                      format(self.__voidsfile__), flush=True)
                 print("x: {}  y: {}  z: {}".format
                     (
                     (value[5] - value[2]),
                     (value[4] - value[1]),
                     (value[3] - value[0])
-                )
-                )
+                ), flush=True)
                 sys.exit(2)
             void_dir = os.path.join(voids_dir, key)
             os.mkdir(void_dir)
     
         for j, filename in enumerate(tif_files):
-            print('\n*********************************************')
-            print('  Processing file {}'.format(filename))
-            print('*********************************************')
+            print('\n*********************************************', flush=True)
+            print('  Processing file {}'.format(filename), flush=True)
+            print('*********************************************', flush=True)
         
             filen = os.path.join(inputDir, filename)
             stack_tif = io.imread(filen, plugin='tifffile')
@@ -111,11 +110,14 @@ class TrjCor(pt.AbstractBaseTool):
                         value[4] >= stack_tif.shape[2] - 20 or \
                         value[3] >= stack_tif.shape[2] - 20:
                     print(' *** Error. Some void coordinates are out of range, '
-                          'check {} file'.format(self.__voidsfile__))
+                          'check {} file'.format(self.__voidsfile__), flush=True)
                     sys.exit(2)
         
-            stack_tif_cut = stack_tif[200:250, :, :]
-        
+            if z1 == -1 or z2 == -1:
+                stack_tif_cut = stack_tif
+            else:
+                stack_tif_cut = stack_tif[z1:z2, :, :]
+
             longName = os.path.splitext(filename)[0]
             longNameSpl = os.path.splitext(filename)[0].split('_')
         
@@ -157,7 +159,7 @@ class TrjCor(pt.AbstractBaseTool):
         dirs = sorted(dirs)
         
         for i, dr in enumerate(dirs):
-            print("Classifying files from directory: {}".format(dr))
+            print("Classifying files from directory: {}".format(dr), flush=True)
             curdir = os.path.join(voids_dir, dr)
             resdir = os.path.join(voids_dir, "seg_{}".format(dr))
             os.mkdir(resdir)
@@ -180,10 +182,10 @@ class TrjCor(pt.AbstractBaseTool):
             
             tif_files = sorted([f for f in os.listdir(curdir)])
             for ind, filename in enumerate(tif_files):
-                print('\n*********************************************')
-                print('  Processing file {}'.format(filename))
-                print('  In directory {}'.format(dr))
-                print('*********************************************')
+                print('\n*********************************************', flush=True)
+                print('  Processing file {}'.format(filename), flush=True)
+                print('  In directory {}'.format(dr), flush=True)
+                print('*********************************************', flush=True)
                 im_class = io.imread(os.path.join(curdir, filename),
                                      plugin='tifffile')
                 im_bin = np.logical_not(im_class.astype(bool)).astype(int)
@@ -198,14 +200,14 @@ class TrjCor(pt.AbstractBaseTool):
         
                     minLab = np.min(lw)
                     maxLab = np.max(lw)
-                    print("labels:  min: {}   max: {}".format(minLab, maxLab))
+                    print("labels:  min: {}   max: {}".format(minLab, maxLab), flush=True)
         
                     hist = measurements.histogram(lw, minLab + 1, maxLab,
                                                   maxLab - minLab)
         
                     maxClLab = np.argmax(hist) + 1
         
-                    print("label of a biggest cluster: {}".format(maxClLab))
+                    print("label of a biggest cluster: {}".format(maxClLab), flush=True)
                     indMaxCl = np.where(lw == maxClLab)
         
                     ccc = False
@@ -226,7 +228,7 @@ class TrjCor(pt.AbstractBaseTool):
     
                 minLab = np.min(lw)
                 maxLab = np.max(lw)
-                print("labels:  min: {}   max: {}".format(minLab, maxLab))
+                print("labels:  min: {}   max: {}".format(minLab, maxLab), flush=True)
     
                 hist = measurements.histogram(lw, minLab + 1, maxLab,
                                               maxLab - minLab)
@@ -263,9 +265,9 @@ class TrjCor(pt.AbstractBaseTool):
         
             cc = []
             for ind_1, filename in enumerate(tif_files):
-                print('\n*********************************************')
-                print('  Processing file {}'.format(filename))
-                print('*********************************************')
+                print('\n*********************************************', flush=True)
+                print('  Processing file {}'.format(filename), flush=True)
+                print('*********************************************', flush=True)
                 im_class = io.imread(os.path.join(cur_dir, filename),
                                      plugin='tifffile')
                 im_bin = im_class.astype(bool).astype(int)
@@ -277,11 +279,11 @@ class TrjCor(pt.AbstractBaseTool):
             
                 COM = measurements.center_of_mass(slsl)
                 COM = np.asarray(COM)
-                print("COM  {}".format(COM))
+                print("COM  {}".format(COM), flush=True)
             
                 ini = np.asarray(value[0:3]).astype(float)
             
-                print('center of mass: ', COM, ini)
+                print('center of mass: ', COM, ini, flush=True)
     
                 cc.append(COM + ini)
         
@@ -442,9 +444,9 @@ class TrjCor(pt.AbstractBaseTool):
         #voids = self.readCrop(cropfile)
     
         centroid = np.average(trs, axis=0)
-        print("centroid shape  {}".format(centroid.shape))
+        print("centroid shape  {}".format(centroid.shape), flush=True)
     
-        print("trs shape  {}".format(trs.shape))
+        print("trs shape  {}".format(trs.shape), flush=True)
     
         # trs dimentions
         # axis 0 - different voids
@@ -475,30 +477,29 @@ class TrjCor(pt.AbstractBaseTool):
             print("{}   translation: "
                   "{}   tr: "
                   "{}   degrees: {}".format(
-                time, translation[time], tr1[time], rotationAngles0[time])
-            )
+                time, translation[time], tr1[time], rotationAngles0[time]), flush=True)
     
-        print('\n*********************************************')
-        print(' Apply translational transformation ')
-        print('*********************************************')
-    
+        print('\n*********************************************', flush=True)
+        print(' Apply translational transformation ', flush=True)
+        print('*********************************************', flush=True)
+        
         tif_files = sorted([f for f in os.listdir(datadir)
                             if (os.path.isfile(
                 os.path.join(datadir, f)) and ".tif" in f)])
     
         for j, filename in enumerate(tif_files):
             # don't need to move first image
-            print('\n*********************************************')
-            print('  Processing file {}'.format(filename))
-            print('*********************************************')
+            print('\n*********************************************', flush=True)
+            print('  Processing file {}'.format(filename), flush=True)
+            print('*********************************************', flush=True)
         
             filen = os.path.join(datadir, filename)
             stack_tif = io.imread(filen, plugin='tifffile')
         
-            print("shape: {}".format(stack_tif.shape))
+            print("shape: {}".format(stack_tif.shape), flush=True)
         
             print("current time {}".format(
-                strftime("%Y-%m-%d %H:%M:%S", localtime())))
+                strftime("%Y-%m-%d %H:%M:%S", localtime())), flush=True)
     
             # apply shift not to first file
             shift = -translation[j]
@@ -516,23 +517,23 @@ class TrjCor(pt.AbstractBaseTool):
             #                     prefilter=True)
 
             if j != 0:
-                print("rotation angle: {}".format(angl0))
+                print("rotation angle: {}".format(angl0), flush=True)
                 res = ndimage.rotate(res, angl0, axes=(1, 2), reshape=False,
                                      output=None, order=3, mode='constant', cval=0.0,
                                      prefilter=True)
                 '''
-                print("rotation angle: {}".format(angl1))
+                print("rotation angle: {}".format(angl1), flush=True)
                 res = ndimage.rotate(res, angl1, axes=(0, 2), reshape=False,
                                      output=None, order=3, mode='constant', cval=0.0,
                                      prefilter=True)
-                print("rotation angle: {}".format(angl2))
+                print("rotation angle: {}".format(angl2), flush=True)
                 res = ndimage.rotate(res, angl2, axes=(0, 1), reshape=False,
                                      output=None, order=3, mode='constant', cval=0.0,
                                      prefilter=True)
                 '''
     
                 
-                print("#{} shift: {}".format(j, shift))
+                print("#{} shift: {}".format(j, shift), flush=True)
                 res = ndimage.interpolation.shift(res, shift)
         
             filename = os.path.splitext(filename)[0]
@@ -567,16 +568,16 @@ class TrjCor(pt.AbstractBaseTool):
         if n_ == 1:
             n_ = 2
 
-        print("######################")
-        print("Split the files into {} pieces".format(n_))
-        print("######################")
+        print("######################", flush=True)
+        print("Split the files into {} pieces".format(n_), flush=True)
+        print("######################", flush=True)
 
         for i, file in enumerate(data_files):
-            print("  Processing: {}".format(file))
+            print("  Processing: {}".format(file), flush=True)
             fp = os.path.join(path_ini, file)
             img = io.imread(fp, plugin='tifffile')
         
-            print("    Image dimentions: {}".format(img.shape))
+            print("    Image dimentions: {}".format(img.shape), flush=True)
             shapes.append(img.shape)
         
             slice_size = round(img.shape[0] / n_)
@@ -591,21 +592,21 @@ class TrjCor(pt.AbstractBaseTool):
                     top = img.shape[0] - 1
                 io.imsave(savef, img[bottom:top, :, :], plugin='tifffile')
     
-        print("######################")
-        print("Filter files")
-        print("######################")
+        print("######################", flush=True)
+        print("Filter files", flush=True)
+        print("######################", flush=True)
         bashCommand = "java -Xmx100G  bsh.Interpreter ijFFTbandpass.bsh {} {}". \
             format(temp_data_dir, temp_data_dir_filtered)
         process = subprocess.call(bashCommand, shell=True)
     
-        print("######################")
-        print("Reconstruct files")
-        print("######################")
+        print("######################", flush=True)
+        print("Reconstruct files", flush=True)
+        print("######################", flush=True)
     
         for i, file in enumerate(data_files):
             rec_f_name = "{}_filtered.tif".format(os.path.splitext(file)[0])
             res = np.zeros(shape=(shapes[i]), dtype=np.uint16)
-            print("  Reconstructing: {}".format(rec_f_name))
+            print("  Reconstructing: {}".format(rec_f_name), flush=True)
             current_min_pos = 0
             for j in range(n_):
                 spl_rec_f_name = "{}_part{}_fil.tif".format(
@@ -659,7 +660,7 @@ class TrjCor(pt.AbstractBaseTool):
     
         file_ini = os.path.split(path_file_ini)[1]
     
-        print("    Image dimentions: {}".format(img.shape))
+        print("    Image dimentions: {}".format(img.shape), flush=True)
         shape = img.shape
         
         # calculate n_ based on the thickness of processed layer.
@@ -672,9 +673,9 @@ class TrjCor(pt.AbstractBaseTool):
         if n_ == 1:
             n_ = 2
 
-        print("######################")
-        print("Split the file into {} pieces".format(n_))
-        print("######################")
+        print("######################", flush=True)
+        print("Split the file into {} pieces".format(n_), flush=True)
+        print("######################", flush=True)
 
         slice_size = round(shape[0] / n_)
     
@@ -690,20 +691,20 @@ class TrjCor(pt.AbstractBaseTool):
                 top = img.shape[0] - 1
             io.imsave(savef, img[bottom:top, :, :], plugin='tifffile')
     
-        print("######################")
-        print("Classify files")
-        print("######################")
+        print("######################", flush=True)
+        print("Classify files", flush=True)
+        print("######################", flush=True)
         bashCommand = "java -Xmx100G  bsh.Interpreter wekaClsfc3D.bsh {} {} {}". \
             format(temp_data_dir, temp_data_dir_class, model_file)
         process = subprocess.call(bashCommand, shell=True)
     
-        print("######################")
-        print("Reconstruct files")
-        print("######################")
+        print("######################", flush=True)
+        print("Reconstruct files", flush=True)
+        print("######################", flush=True)
     
         rec_f_name = "{}_seg.tif".format(os.path.splitext(file_ini)[0])
         res = np.zeros(shape=shape, dtype=np.uint8)
-        print("  Reconstructing: {}".format(rec_f_name))
+        print("  Reconstructing: {}".format(rec_f_name), flush=True)
         current_min_pos = 0
         for j in range(n_):
             spl_rec_f_name = "{}_part{}_seg.tif".format(
@@ -748,7 +749,7 @@ class TrjCor(pt.AbstractBaseTool):
         if choice == 'y':
             return
         else:
-            print('Running interrupted')
+            print('Running interrupted', flush=True)
             sys.exit(2)
 
 
@@ -770,13 +771,13 @@ class TrjCor(pt.AbstractBaseTool):
         # get a label of the biggest cluster
         minLab = np.min(lw)
         maxLab = np.max(lw)
-        print("labels:  min: {}   max: {}".format(minLab, maxLab))
+        print("labels:  min: {}   max: {}".format(minLab, maxLab), flush=True)
         
         hist = measurements.histogram(lw, minLab + 1, maxLab, maxLab - minLab)
         
         # maxCl = np.max(hist)
         maxClLab = np.argmax(hist) + 1
-        print("label of a biggest cluster: {}".format(maxClLab))
+        print("label of a biggest cluster: {}".format(maxClLab), flush=True)
         aux[lw != maxClLab] = 0
         return (aux[1:-1, 1:-1, 1:-1]).astype(np.uint8)
     
@@ -803,11 +804,11 @@ class TrjCor(pt.AbstractBaseTool):
     
     
     def erode_converge(self, bin_image):
-        print("Erode array")
+        print("Erode array", flush=True)
         size = bin_image.shape[0] * bin_image.shape[1] * bin_image.shape[2]
         next_size = measurements.sum(bin_image)
         while (next_size < size):
-            print("size: {}  next: {}".format(size, next_size))
+            print("size: {}  next: {}".format(size, next_size), flush=True)
             bin_image = self.erode_NN(bin_image)
             size = next_size
             next_size = measurements.sum(bin_image)
@@ -816,31 +817,31 @@ class TrjCor(pt.AbstractBaseTool):
     
     
     def clean_image(self, bin_image, mark="  "):
-        print("{}  A0 ** Number: {}".format(mark, measurements.sum(bin_image)))
+        print("{}  A0 ** Number: {}".format(mark, measurements.sum(bin_image)), flush=True)
         
         bin_image = binary_fill_holes(bin_image).astype(np.uint8)
         
-        print("{}  A1 ** Number: {}".format(mark, measurements.sum(bin_image)))
+        print("{}  A1 ** Number: {}".format(mark, measurements.sum(bin_image)), flush=True)
         
         bin_image = binary_erosion(bin_image, iterations=2).astype(np.uint8)
         
-        print("{}  A ** Number: {}".format(mark, measurements.sum(bin_image)))
+        print("{}  A ** Number: {}".format(mark, measurements.sum(bin_image)), flush=True)
         
         bin_image = binary_fill_holes(bin_image).astype(np.uint8)
         
-        print("{}  B ** Number: {}".format(mark, measurements.sum(bin_image)))
+        print("{}  B ** Number: {}".format(mark, measurements.sum(bin_image)), flush=True)
         
         bin_image = binary_dilation(bin_image, iterations=2).astype(np.uint8)
         
-        print("{}  C ** Number: {}".format(mark, measurements.sum(bin_image)))
+        print("{}  C ** Number: {}".format(mark, measurements.sum(bin_image)), flush=True)
         
         bin_image = self.erode_converge(bin_image)
         
-        print("{}  D ** Number: {}".format(mark, measurements.sum(bin_image)))
+        print("{}  D ** Number: {}".format(mark, measurements.sum(bin_image)), flush=True)
         
         bin_image = self.clean_not_attached(bin_image)
         
-        print("{}  E ** Number: {}".format(mark, measurements.sum(bin_image)))
+        print("{}  E ** Number: {}".format(mark, measurements.sum(bin_image)), flush=True)
         
         return bin_image.astype(np.uint8)
     
@@ -862,32 +863,32 @@ class TrjCor(pt.AbstractBaseTool):
                 os.path.join(dir_path, f)) and ".tif" in f)])
     
         for i, file in enumerate(tif_files):
-            print('\n*********************************************')
-            print('  Processing file {}'.format(file))
-            print('*********************************************')
+            print('\n*********************************************', flush=True)
+            print('  Processing file {}'.format(file), flush=True)
+            print('*********************************************', flush=True)
             file_path = os.path.join(dir_path, file)
             im_class = io.imread(file_path, plugin='tifffile')
             im_bin = im_class.astype(bool).astype(np.uint8)
         
             # 1 - is pore space here, 0 - solid
         
-            print("######################")
-            print("Clean bright")
-            print("######################")
+            print("######################", flush=True)
+            print("Clean bright", flush=True)
+            print("######################", flush=True)
         
             im_bin = self.clean_image(im_bin, mark="I ")
         
-            print("######################")
-            print("Inverting image")
-            print("######################")
+            print("######################", flush=True)
+            print("Inverting image", flush=True)
+            print("######################", flush=True)
         
             im_bin = np.logical_not(im_bin).astype(np.uint8)
         
             # 0 - pore space, 1 - is solid
         
-            print("######################")
-            print("Clean dark")
-            print("######################")
+            print("######################", flush=True)
+            print("Clean dark", flush=True)
+            print("######################", flush=True)
         
             im_bin = self.clean_image(im_bin, mark="II")
     
@@ -939,46 +940,73 @@ class TrjCor(pt.AbstractBaseTool):
             
 
     def execute(self, dictFileName):
-        print('Starting {0:s} tool'.format(self.__toolName__))
+        print('Starting {0:s} tool'.format(self.__toolName__), flush=True)
 
         print("Start time {}".format(
-            strftime("%Y-%m-%d %H:%M:%S", localtime())))
+            strftime("%Y-%m-%d %H:%M:%S", localtime())), flush=True)
 
         lines = self.read_dict(dictFileName)
         empty, inputDir, description = \
             self.check_a_parameter('inputDir', lines)
+        empty, z1, description = \
+            self.check_a_parameter('z1', lines)
+        empty, z2, description = \
+            self.check_a_parameter('z2', lines)
         empty, wekaDir, description = \
             self.check_a_parameter('classModel', lines)
         
-        self.phase1(inputDir)
+        z1 = int(z1)
+        z2 = int(z2)
+
+        print("+++ Start phase1", flush=True)
+        
+        self.phase1(inputDir, z1, z2)
+        
+        print("+++ Start phase2", flush=True)
         
         self.phase2(wekaDir)
+
+        print("+++ Start phase3", flush=True)
         
         # segmenting voids
         self.phase3()
         
+        print("+++ Start phase4", flush=True)
+        
         # calculating center of mass
         self.phase4()
+        
+        print("+++ Start phase5", flush=True)
         
         # apply rotation and translation
         self.phase5()
         
+        print("+++ Start phase6", flush=True)
+        
         # apply bandpass filter
         self.phase6()
         
+        print("+++ Start phase7", flush=True)
         # segment time 0
         self.phase7(wekaDir)
         
         print("Current time before manual cleaning {}".format(
-            strftime("%Y-%m-%d %H:%M:%S", localtime())))
+            strftime("%Y-%m-%d %H:%M:%S", localtime())), flush=True)
         # clean segmented time 0
         # probably manually
         self.phase7p5()
         
+        print("+++ Start phase8", flush=True)
+        
         # remove small clusters from segmented time 0
         self.phase8()
         
+        print("+++ Start phase9", flush=True)
+        
         # subtrack
         self.phase9()
+
+        print("End time {}".format(
+            strftime("%Y-%m-%d %H:%M:%S", localtime())), flush=True)
 
         return True
