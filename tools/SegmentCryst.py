@@ -208,7 +208,7 @@ class SegmentCryst(pt.AbstractBaseTool):
                 current_min_pos = current_max_pos
     
             savef = os.path.join(cryst_dir, rec_f_name)
-            io.imsave(savef, res[:, :, :-1], plugin='tifffile')
+            io.imsave(savef, res[:, :, :], plugin='tifffile')
 
         rmtree(temp_data_dir)
         rmtree(class_split_data_dir)

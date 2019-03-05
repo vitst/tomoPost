@@ -935,7 +935,7 @@ class TrjCor(pt.AbstractBaseTool):
                 "segmentation proc boundaries effect")
             filename = os.path.splitext(filename)[0]
             savef = os.path.join(resdir, '{}_subtr.tif'.format(filename))
-            io.imsave(savef, stack_tif[1:-1, :, :], plugin='tifffile')
+            io.imsave(savef, stack_tif[4:-4, :, :], plugin='tifffile')
             
             
 
