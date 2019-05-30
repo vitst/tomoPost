@@ -389,7 +389,6 @@ class TomoAnalysis(pt.AbstractBaseTool):
             
             solid_bin = np.add(im0_bin, im_bin)
             
-            
         #plt.xscale('log')
         #plt.yscale('log')
         plt.tight_layout()
