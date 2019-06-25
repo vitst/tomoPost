@@ -263,25 +263,89 @@ class TomoAnalysis(pt.AbstractBaseTool):
         return xarr, yarr
         #return xarr[:-1], yarr[1:-1]
 
+    def plot_clusters1(self, im0_bin, tot_cryst_bin, prev_cryst_bin,
+                      add_cryst_bin):
+    
+        lw, num = measurements.label(tot_cryst_bin)
+        res = np.multiply(lw, prev_cryst_bin)
+    
+        elem_tot = np.unique(lw)
+        elem = np.unique(res)
+    
+        n_new_cl = elem_tot.shape[0] - elem.shape[0]
+    
+        yarr = float(n_new_cl)
+    
+        return yarr
+
+    def cluster_hist(self, tot_cryst_bin):
+        num_bins = 100
+    
+        lw, num = measurements.label(tot_cryst_bin)
+        
+        print("type lw: {}".format(lw.dtype))
+        
+        minLab = np.min(lw[np.nonzero(lw)])
+        maxLab = np.max(lw[np.nonzero(lw)])
+
+        hist1, bin_edges1 = np.histogram(lw, bins=100000, range=(1, 100000))
+        
+        print("min cl w: {}   max cl w: {}".format(minLab, maxLab))
+        
+        hist, bin_edges = np.histogram(hist1[np.nonzero(hist1)], bins=num_bins, range=(1, 200))
+
+        be = bin_edges[:-1] + (bin_edges[1] - bin_edges[0])/2.0
+
+        return be, hist
+
+    def plot_pore_vs_h(self, pores):
+        slice_size = 10
+        NN = int(pores.shape[0] / slice_size) + 1
+    
+        xarr = []
+        yarr = []
+        for ii in range(NN):
+            bottom = ii * slice_size
+            top = min(pores.shape[0], (ii + 1) * slice_size)
+        
+            if top <= bottom:
+                break
+        
+            pore_aver = np.average(pores[bottom:top, :, :])
+
+            # in um
+            hight = (pores.shape[0] - bottom - slice_size / 2) * self.SCALE
+        
+            xarr.append(hight)
+            yarr.append(pore_aver)
+    
+        xarr = np.asarray(xarr)
+        yarr = np.asarray(yarr)
+    
+        return xarr, yarr
+
     def plot_Ncryst_vsPoreSize(self, im_bin_cryst, im_pore):
         #minPore = self.SCALE * np.min(im_pore)
         #maxPore = self.SCALE * np.max(im_pore)
-        minPore = self.SCALE * np.min(im_pore[np.nonzero(im_pore)])
-        maxPore = self.SCALE * np.max(im_pore[np.nonzero(im_pore)])
+        #minPore = self.SCALE * np.min(im_pore[np.nonzero(im_pore)])
+        #maxPore = self.SCALE * np.max(im_pore[np.nonzero(im_pore)])
+        minPore = np.min(im_pore[np.nonzero(im_pore)])
+        maxPore = np.max(im_pore[np.nonzero(im_pore)])
         num_bin = 200
         
         hist_pores, bin_edges_pores =\
             np.histogram(im_pore, bins=num_bin, range=(minPore, maxPore))
         
         CP = np.multiply(im_bin_cryst, im_pore)
-        #CP = im_pore
 
-        hist, bin_edges = np.histogram(CP, bins=num_bin, range=(minPore, maxPore))
+        hist, bin_edges = \
+            np.histogram(CP, bins=num_bin, range=(minPore, maxPore))
         
         be = bin_edges[:-1] + (bin_edges[1] - bin_edges[0])/2.0
         
-        ret_hist = np.divide(hist, hist_pores)
-        
+        #ret_hist = np.divide(hist, hist_pores)
+        ret_hist = hist_pores
+
         return be, ret_hist
         
         
@@ -340,6 +404,12 @@ class TomoAnalysis(pt.AbstractBaseTool):
         solid_bin = deepcopy(im0_bin)
         previous_crystals = np.zeros(im0_bin.shape)
         ini_time = 0
+        
+        #axX1=[]
+        #axY1=[]
+        
+        j = 0
+
         for i, file in enumerate(crystal_files):
             
             file_path = os.path.join(crystalDir, file)
@@ -352,7 +422,7 @@ class TomoAnalysis(pt.AbstractBaseTool):
             pore_img = io.imread(pore_path, plugin='tifffile')
             
             # number of crystal voxels
-            nCryst = np.sum(im_bin)
+            #nCryst = np.sum(im_bin)
 
             fnm = file.split("_")
             time = 0
@@ -360,44 +430,59 @@ class TomoAnalysis(pt.AbstractBaseTool):
                 if "min" in ww:
                     time = int(ww[:-3])
 
-            print("time: {} min  im0 shape: {}; current im shape:{}".
-                  format(time, im0_bin.shape, im_bin.shape))
+            print("{}   time: {} min".format(i, time))
 
+            #axX, axY = self.plot_pore_vs_h(pore_img)
+            
             #axX, axY = self.plot_nCryst_per_surf(KGG, im_bin)
             #axX, axY = self.plot_Ncryst_vsPoreSize(im_bin, pore_img)
-            previous_crystals = np.multiply(previous_crystals, im_bin)
-            add_cryst = np.subtract(im_bin, previous_crystals)
-            add_cryst[add_cryst < 0] = 0
+
+            #previous_crystals = np.multiply(previous_crystals, im_bin)
+            #add_cryst = np.subtract(im_bin, previous_crystals)
+            #add_cryst[add_cryst < 0] = 0
             #axX, axY = self.plot_nucleation(im0_bin, im_bin,
             #                                previous_crystals, add_cryst)
-            axX, axY = self.plot_clusters(im0_bin, im_bin,
-                                            previous_crystals, add_cryst)
-            previous_crystals = im_bin
+            #axY = self.plot_clusters1(im0_bin, im_bin,
+            #                                previous_crystals, add_cryst)
+            axX, axY = self.cluster_hist(im_bin)
+            #previous_crystals = im_bin
             
             dtime = time - ini_time
-            axY = axY / dtime
+            #axY = axY / dtime
             ini_time = time
+            
+            #axX1.append(time)
+            #axY1.append(axY)
 
-            YY1 = np.polyfit(axX, axY, 3)
-            pf = np.poly1d(YY1)
-
-            pfX = np.linspace(axX[0], axX[-1], 100)
-
+            #YY1 = np.polyfit(axX, axY, 3)
+            #pf = np.poly1d(YY1)
+            #pfX = np.linspace(axX[0], axX[-1], 100)
             #plt.plot(pfX, pf(pfX), colors[i])
 
-            plt.plot(axX, axY, colors1[i])
+            if i%3==0:
+                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+                plt.plot(axX, axY, colors1[j])
+                j=j+1
             
-            solid_bin = np.add(im0_bin, im_bin)
-            
-        #plt.xscale('log')
-        #plt.yscale('log')
+            #solid_bin = np.add(im0_bin, im_bin)
+            #break
+
+        #axX1 = np.asarray(axX1)
+        #axY1 = np.asarray(axY1)
+        #plt.plot(axX1, axY1, colors1[i])
+        
+        plt.xscale('log')
+        plt.yscale('log')
         plt.tight_layout()
         plt.show()
         #res_file_name = "Ncr_perSurfperdt_vsH.png"
-        res_file_name = "Ncr_perPoreVol_vsSize.png"
+        #res_file_name = "meanPoreSize_vs_H.png"
         #res_file_name = "Surf_vsH.png"
-        #res_file_name = "histPoreSize.png"
-        #plt.savefig(res_file_name, format='png', dpi=300)
+        
+        res_file_name = "histPoreSize.png"
+        #res_file_name = "Ncr_perPoreVol_vsSize.png"
+        res_file_path = os.path.join(outputDir,res_file_name)
+        #plt.savefig(res_file_path, format='png', dpi=300)
         #plt.savefig(res_file_name, format='pdf', dpi=300)
 
 

@@ -817,38 +817,45 @@ class TrjCor(pt.AbstractBaseTool):
     
     
     def clean_image(self, bin_image, mark="  "):
-        print("{}  A0 ** Number: {}".format(mark, measurements.sum(bin_image)), flush=True)
+        print("{}  A0 ** Number: {}".format(mark, measurements.sum(bin_image)),
+              flush=True)
         
         bin_image = binary_fill_holes(bin_image).astype(np.uint8)
         
-        print("{}  A1 ** Number: {}".format(mark, measurements.sum(bin_image)), flush=True)
+        print("{}  A1 ** Number: {}".format(mark, measurements.sum(bin_image)),
+              flush=True)
         
         bin_image = binary_erosion(bin_image, iterations=2).astype(np.uint8)
         
-        print("{}  A ** Number: {}".format(mark, measurements.sum(bin_image)), flush=True)
+        print("{}  A ** Number: {}".format(mark, measurements.sum(bin_image)),
+              flush=True)
         
         bin_image = binary_fill_holes(bin_image).astype(np.uint8)
         
-        print("{}  B ** Number: {}".format(mark, measurements.sum(bin_image)), flush=True)
+        print("{}  B ** Number: {}".format(mark, measurements.sum(bin_image)),
+              flush=True)
         
         bin_image = binary_dilation(bin_image, iterations=2).astype(np.uint8)
         
-        print("{}  C ** Number: {}".format(mark, measurements.sum(bin_image)), flush=True)
+        print("{}  C ** Number: {}".format(mark, measurements.sum(bin_image)),
+              flush=True)
         
         bin_image = self.erode_converge(bin_image)
         
-        print("{}  D ** Number: {}".format(mark, measurements.sum(bin_image)), flush=True)
+        print("{}  D ** Number: {}".format(mark, measurements.sum(bin_image)),
+              flush=True)
         
         bin_image = self.clean_not_attached(bin_image)
         
-        print("{}  E ** Number: {}".format(mark, measurements.sum(bin_image)), flush=True)
+        print("{}  E ** Number: {}".format(mark, measurements.sum(bin_image)),
+              flush=True)
         
         return bin_image.astype(np.uint8)
     
     
-        ############################################################################
-        ############################################################################
-        ############################################################################
+    ############################################################################
+    ############################################################################
+    ############################################################################
 
     
     def phase8(self):
