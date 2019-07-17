@@ -2,7 +2,7 @@ import postTomo as pt
 
 import os, sys
 import numpy as np
-
+import multiprocessing as mp
 
 import re
 import math
@@ -141,7 +141,7 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
         
         return surfArea
 
-    def N_clusters(self, tot_cryst_bin, prev_cryst_bin):
+    def N_clusters(self, tot_cryst_bin, prev_cryst_bin, Nprev):
     
         lw, num = measurements.label(tot_cryst_bin)
         
@@ -164,14 +164,37 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
         hist[ hist < 27 ] = 0
         hist[ hist !=0 ] = 1
 
-        sum_hist = np.sum( np.sum(hist[np.nonzero(hist)]) )
+        sum_hist = np.sum(hist[np.nonzero(hist)])
         
         #print("hist: {}  num: {}".format(ss, num))
         #exit(0)
 
-        yarr = float(sum_hist)
+        Ntotal = float(sum_hist)
+
+        NoldMerged = 0
+        if np.max(prev_cryst_bin)>0:
+            # remove all new crystal pixels
+            no_new = np.multiply(lw, prev_cryst_bin)
+            # remove all new crystal pixels
+            no_new_hist = measurements.histogram(no_new,
+                                                 minLab + 1,
+                                                 maxLab,
+                                                 maxLab - minLab)
+            
+            no_new_hist[ no_new_hist !=0 ] = 1
+            NoldMerged = np.sum(no_new_hist[np.nonzero(no_new_hist)])
+            
+        N_plus = Ntotal - NoldMerged
+
+        N_minus = Nprev - NoldMerged
+        
+        print("tot: {}   prev: {}   merged: {}".
+              format(Ntotal, Nprev, NoldMerged), flush=True)
+
+        return Ntotal, N_plus, N_minus
     
-        return yarr
+    def proc_files_in_loop(self):
+        pass
 
     def execute(self, dictFileName):
         # variables for plotting
@@ -225,17 +248,25 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
               format( self.extract_time_from_filename(iniDirFiles[0]) ))
         
         # the current solid material (initial beads with crystals)
-        solidBin = deepcopy(im0bin)
+        #solidBin = deepcopy(im0bin)
         # auxiliary varialbe to calc increment in crystal voxels (initially - 0)
         previousCrystals = np.zeros(im0bin.shape)
         iniTime = 0
+        Nprev=0
         
         axisX = np.empty(0)
         axisY = np.empty(0)
+        axisY1 = np.empty(0)
+        axisY2 = np.empty(0)
 
         #axisX = np.append(axisX, iniTime)
         #axisY = np.append(axisY, Nsurf)
-
+        
+        # initialize parallel
+        pool = mp.Pool(int(mp.cpu_count()/2))
+        #results = [pool.apply(howmany_within_range, args=(row, 4, 8))
+        #           for row in data]
+        
         for i, file in enumerate(crystalFiles):
             # read crystal files (crystals at current moment are 255, rest - 0)
             filePath = os.path.join(crystalDir, file)
@@ -243,19 +274,19 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
             # convert img to binary: crystals - 1, rest - 0
             imBin = img.astype(bool).astype(np.int8)
             # apdate the solid part
-            solidBin = np.add(im0bin, imBin)
+            #solidBin = np.add(im0bin, imBin)
 
             # read pore files (0 - solid, the rest is in float numbers
             # - the size of the pore in voxels)
-            porePath = os.path.join(poreDir, poreFiles[i])
-            poreImg = io.imread(porePath, plugin='tifffile')
+            #porePath = os.path.join(poreDir, poreFiles[i])
+            #poreImg = io.imread(porePath, plugin='tifffile')
             
             ########################
             # calculation of additional volume information
             previousCrystals = np.multiply(previousCrystals, imBin)
             # new crystal voxels for this time
-            addCryst = np.subtract(imBin, previousCrystals)
-            addCryst[addCryst < 0] = 0
+            #addCryst = np.subtract(imBin, previousCrystals)
+            #addCryst[addCryst < 0] = 0
             ########################
             
             fnm = file.split("_")
@@ -267,8 +298,9 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
             #currentSurf = self.calc_surface_area(solidBin)
             #yVal = np.sum(imBin) # total amount of crystal voxels
             # total number of clusters
-            yVal = self.N_clusters(imBin, previousCrystals)
-
+            yVal, N_plus, N_minus \
+                = self.N_clusters(imBin, previousCrystals, Nprev)
+            Nprev = yVal
             print("time: {} min  val:  {}".format(time, yVal))
 
             previousCrystals = imBin
@@ -278,17 +310,21 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
             
             axisX = np.append(axisX, time)
             axisY = np.append(axisY, yVal)
+            axisY1 = np.append(axisY1, N_plus)
+            axisY2 = np.append(axisY2, N_minus)
 
 
         plt.plot(axisX, axisY, "ko")
-        
+        plt.plot(axisX, axisY1, "ro")
+        plt.plot(axisX, axisY2, "bo")
+
         #plt.xscale('log')
         #plt.yscale('log')
         plt.tight_layout()
         #plt.show()
         
         # file names
-        res_file_name = "totalNClust.png"
+        res_file_name = "totalNClustPlusMinus.png"
         res_file_path = os.path.join(outputDir,res_file_name)
         plt.savefig(res_file_path, format='png', dpi=300)
         #plt.savefig(res_file_path, format='pdf', dpi=300)

@@ -109,8 +109,9 @@ class TrjCor(pt.AbstractBaseTool):
                         value[5] >= stack_tif.shape[2] - 20 or \
                         value[4] >= stack_tif.shape[2] - 20 or \
                         value[3] >= stack_tif.shape[2] - 20:
-                    print(' *** Error. Some void coordinates are out of range, '
-                          'check {} file'.format(self.__voidsfile__), flush=True)
+                    print(' *** Error. Some void coordinates are out of range,'
+                          ' check {} file'.format(self.__voidsfile__),
+                          flush=True)
                     sys.exit(2)
         
             if z1 == -1 or z2 == -1:
@@ -476,8 +477,11 @@ class TrjCor(pt.AbstractBaseTool):
         
             print("{}   translation: "
                   "{}   tr: "
-                  "{}   degrees: {}".format(
-                time, translation[time], tr1[time], rotationAngles0[time]), flush=True)
+                  "{}   degrees: {}".format(time,
+                                            translation[time],
+                                            tr1[time],
+                                            rotationAngles0[time]),
+                    flush=True)
     
         print('\n*********************************************', flush=True)
         print(' Apply translational transformation ', flush=True)
@@ -967,20 +971,22 @@ class TrjCor(pt.AbstractBaseTool):
 
         print("+++ Start phase1", flush=True)
         
+        # create voids from input directory and cropdata file
         self.phase1(inputDir, z1, z2)
         
         print("+++ Start phase2", flush=True)
         
+        # segmenting voids
         self.phase2(wekaDir)
 
         print("+++ Start phase3", flush=True)
         
-        # segmenting voids
+        # cleaning segmented voids
         self.phase3()
         
         print("+++ Start phase4", flush=True)
         
-        # calculating center of mass
+        # calculating center of mass in voids
         self.phase4()
         
         print("+++ Start phase5", flush=True)
