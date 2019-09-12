@@ -141,7 +141,7 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
         
         return surfArea
 
-    def N_clusters(self, tot_cryst_bin, prev_cryst_bin, Nprev):
+    def N_clusters(self, tot_cryst_bin, prev_cryst_bin, Nprev, cutoff):
     
         lw, num = measurements.label(tot_cryst_bin)
         
@@ -161,7 +161,7 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
         #ss = np.sum(hist)
         
         # remove clusters below 3 from count
-        hist[ hist < 27 ] = 0
+        hist[ hist < cutoff ] = 0
         hist[ hist !=0 ] = 1
 
         sum_hist = np.sum(hist[np.nonzero(hist)])
@@ -298,8 +298,9 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
             #currentSurf = self.calc_surface_area(solidBin)
             #yVal = np.sum(imBin) # total amount of crystal voxels
             # total number of clusters
+            cutoff = 10
             yVal, N_plus, N_minus \
-                = self.N_clusters(imBin, previousCrystals, Nprev)
+                = self.N_clusters(imBin, previousCrystals, Nprev, cutoff)
             Nprev = yVal
             print("time: {} min  val:  {}".format(time, yVal))
 
@@ -315,18 +316,18 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
 
 
         plt.plot(axisX, axisY, "ko")
-        plt.plot(axisX, axisY1, "ro")
-        plt.plot(axisX, axisY2, "bo")
+        #plt.plot(axisX, axisY1, "ro")
+        #plt.plot(axisX, axisY2, "bo")
 
         #plt.xscale('log')
         #plt.yscale('log')
         plt.tight_layout()
-        #plt.show()
+        plt.show()
         
         # file names
         res_file_name = "totalNClustPlusMinus.png"
         res_file_path = os.path.join(outputDir,res_file_name)
-        plt.savefig(res_file_path, format='png', dpi=300)
+        #plt.savefig(res_file_path, format='png', dpi=300)
         #plt.savefig(res_file_path, format='pdf', dpi=300)
 
         print("End time {}".format(

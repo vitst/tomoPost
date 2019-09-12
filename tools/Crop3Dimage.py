@@ -75,7 +75,11 @@ class Crop3Dimage(pt.AbstractBaseTool):
             
             filen = os.path.join(inputDir, filename)
             stack_tif = io.imread(filen, plugin='tifffile')
-    
+
+            if zmax == -1: zmax = stack_tif.shape[0]+1
+            if ymax == -1: ymax = stack_tif.shape[1]+1
+            if xmax == -1: xmax = stack_tif.shape[2]+1
+
             stack_tif = stack_tif[zmin:zmax,ymin:ymax,xmin:xmax]
     
             resultFilename = os.path.splitext(filename)[0]

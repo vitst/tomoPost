@@ -298,32 +298,6 @@ class TomoAnalysis(pt.AbstractBaseTool):
 
         return be, hist
 
-    def plot_pore_vs_h(self, pores):
-        slice_size = 10
-        NN = int(pores.shape[0] / slice_size) + 1
-    
-        xarr = []
-        yarr = []
-        for ii in range(NN):
-            bottom = ii * slice_size
-            top = min(pores.shape[0], (ii + 1) * slice_size)
-        
-            if top <= bottom:
-                break
-        
-            pore_aver = np.average(pores[bottom:top, :, :])
-
-            # in um
-            hight = (pores.shape[0] - bottom - slice_size / 2) * self.SCALE
-        
-            xarr.append(hight)
-            yarr.append(pore_aver)
-    
-        xarr = np.asarray(xarr)
-        yarr = np.asarray(yarr)
-    
-        return xarr, yarr
-
     def plot_Ncryst_vsPoreSize(self, im_bin_cryst, im_pore):
         #minPore = self.SCALE * np.min(im_pore)
         #maxPore = self.SCALE * np.max(im_pore)
@@ -332,6 +306,15 @@ class TomoAnalysis(pt.AbstractBaseTool):
         minPore = np.min(im_pore[np.nonzero(im_pore)])
         maxPore = np.max(im_pore[np.nonzero(im_pore)])
         num_bin = 200
+        
+        lw, num = measurements.label(im_bin_cryst)
+        minLab = np.min(lw)
+        maxLab = np.max(lw)
+        print("labels:  min: {}   max: {}".format(minLab, maxLab), flush=True)
+        hist = measurements.histogram(lw, minLab + 1, maxLab, maxLab - minLab)
+        for i1, size in enumerate(hist):
+            if size < 10:
+                im_bin_cryst[ im_bin_cryst==i1 ]=0
         
         hist_pores, bin_edges_pores =\
             np.histogram(im_pore, bins=num_bin, range=(minPore, maxPore))
@@ -435,7 +418,8 @@ class TomoAnalysis(pt.AbstractBaseTool):
             #axX, axY = self.plot_pore_vs_h(pore_img)
             
             #axX, axY = self.plot_nCryst_per_surf(KGG, im_bin)
-            #axX, axY = self.plot_Ncryst_vsPoreSize(im_bin, pore_img)
+            
+            axX, axY = self.plot_Ncryst_vsPoreSize(im_bin, pore_img)
 
             #previous_crystals = np.multiply(previous_crystals, im_bin)
             #add_cryst = np.subtract(im_bin, previous_crystals)
@@ -444,7 +428,7 @@ class TomoAnalysis(pt.AbstractBaseTool):
             #                                previous_crystals, add_cryst)
             #axY = self.plot_clusters1(im0_bin, im_bin,
             #                                previous_crystals, add_cryst)
-            axX, axY = self.cluster_hist(im_bin)
+            #axX, axY = self.cluster_hist(im_bin)
             #previous_crystals = im_bin
             
             dtime = time - ini_time
@@ -461,7 +445,7 @@ class TomoAnalysis(pt.AbstractBaseTool):
 
             if i%3==0:
                 print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-                plt.plot(axX, axY, colors1[j])
+                plt.plot(axX, axY, colors1[j], label='t={}'.format(time))
                 j=j+1
             
             #solid_bin = np.add(im0_bin, im_bin)

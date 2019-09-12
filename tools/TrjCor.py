@@ -57,7 +57,11 @@ class TrjCor(pt.AbstractBaseTool):
         self.parameters.append(
             ['classModel', 'wekaModel', 'directory with classifier files']
         )
-    
+        
+        self.parameters.append(
+            ['phases', '1-2-3-4-5-6-7-8-9', 'pick phases to apply']
+        )
+
     def phase1(self, inputDir, z1, z2):
         os.makedirs(self.__resDir__)
         # dirrectory for voids
@@ -634,22 +638,27 @@ class TrjCor(pt.AbstractBaseTool):
         #path_file_ini = os.path.join(self.__testDir__, 'ini_TR_BP', '02_run06_0015min_trsmd_filtered.tif')
 
         path_file_iniDir = os.path.join(self.__resDir__, 'ini_TR_BP')
-
-        tif_files_from_ini = sorted([f for f in os.listdir(path_file_iniDir)
-                                  if (os.path.isfile(
-                os.path.join(path_file_iniDir, f)) and ".tif" in f)])
-
-        path_file_ini = os.path.join(path_file_iniDir, tif_files_from_ini[0])
-
         # a directory where result should be stored
         path_res = os.path.join(self.__resDir__, 'ini_TR_BP_cl0')
-        # number of pieces to split the tomo data
-        
         # model file
-        #model_file = os.path.join(wekaDir, 'run6t0wekaFFTband.model')
         weka_files = sorted([f for f in os.listdir(wekaDir)
                              if (os.path.isfile(os.path.join(wekaDir, f))
                                  and "FFTband" in f)])
+        if not os.path.isdir(path_file_iniDir):
+            path_file_iniDir = os.path.join(self.__resDir__, 'ini_TR')
+            path_res = os.path.join(self.__resDir__, 'ini_TR_cl0')
+            # model file
+            weka_files = sorted([f for f in os.listdir(wekaDir)
+                                 if (os.path.isfile(os.path.join(wekaDir, f))
+                                     and "Raw" in f)])
+
+        tif_files_from_ini = sorted([f for f in os.listdir(path_file_iniDir)
+                                  if (os.path.isfile(
+                 os.path.join(path_file_iniDir, f)) and ".tif" in f)])
+
+        path_file_ini = os.path.join(path_file_iniDir, tif_files_from_ini[0])
+
+        
         model_file = os.path.join(wekaDir, weka_files[0])
 
         os.mkdir(path_res)
@@ -730,8 +739,8 @@ class TrjCor(pt.AbstractBaseTool):
         
             this_slice = img.shape[0] - added
             current_max_pos = current_min_pos + this_slice
-            res[current_min_pos:current_max_pos, :, :] = img[min_sl:max_sl, :,
-                                                         :]
+            res[current_min_pos:current_max_pos, :, :] = \
+                img[min_sl:max_sl, :, :]
             current_min_pos = current_max_pos
     
         savef = os.path.join(path_res, rec_f_name)
@@ -741,20 +750,58 @@ class TrjCor(pt.AbstractBaseTool):
         rmtree(temp_data_dir_class)
         
     def phase7p5(self):
-        choice = ''
-        while choice != 'y' and choice != 'n':
-            # need to know what is the version of the interpreter
-            choice = input('\nAt this point the area of the capillary needs to\n'
-                           ' be manually cleaned. Erase all the noise out of\n'
-                           ' the internal area of the capillary and then\n'
-                           ' enter `y` here.\n'
-                           ' Did you clean the image and want to'
-                           ' continue? (y/n): ')
-        if choice == 'y':
-            return
+    
+        maskDir = 'manualMask'
+        if os.path.isdir(maskDir):
+            time0fileDir = os.path.join(self.__resDir__, 'ini_TR_BP_cl0')
+            if not os.path.isdir(time0fileDir):
+                time0fileDir = os.path.join(self.__resDir__, 'ini_TR_cl0')
+    
+            tif_files_from0 = sorted([f for f in os.listdir(time0fileDir)
+                                      if (os.path.isfile(
+                    os.path.join(time0fileDir, f)) and ".tif" in f)])
+            time0file = os.path.join(time0fileDir, tif_files_from0[0])
+            bin_image0 = io.imread(time0file, plugin='tifffile')
+            
+            mask_tif = sorted([f for f in os.listdir(maskDir)
+                               if(os.path.isfile(os.path.join(maskDir, f))
+                                  and ".tif" in f)
+                               ])
+    
+            print("Found directory {} with capillary mask: {}".
+                  format(maskDir, mask_tif[0], flush=True))
+
+            path_file_mask = os.path.join(maskDir,mask_tif[0])
+            mask = io.imread(path_file_mask, plugin='tifffile')
+            im0Sh = bin_image0.shape
+            mSh = mask.shape
+            if im0Sh[1:3] != mSh:
+                print('Shape of the mask is {} '
+                      'and it does not match the shape of the image {}'.
+                      format(mSh, im0Sh), flush=True)
+                sys.exit(2)
+                
+            bin_image0[:, mask == 0] = 0
+            
+            io.imsave(time0file, bin_image0, plugin='tifffile')
         else:
-            print('Running interrupted', flush=True)
-            sys.exit(2)
+            print("Didn't find the directory {} with mask".format(maskDir))
+            choice = ''
+            while choice != 'y' and choice != 'n':
+                # need to know what is the version of the interpreter
+                choice = input('\nAt this point the area of the capillary '
+                               'needs to\n'
+                               ' be manually cleaned. Erase all the noise '
+                               'out of\n'
+                               ' the internal area of the capillary and then\n'
+                               ' enter `y` here.\n'
+                               ' Did you clean the image and want to'
+                               ' continue? (y/n): ')
+            if choice == 'y':
+                return
+            else:
+                print('Running interrupted', flush=True)
+                sys.exit(2)
 
 
     ############################################################################
@@ -865,6 +912,9 @@ class TrjCor(pt.AbstractBaseTool):
     def phase8(self):
         dir_path = os.path.join(self.__resDir__, 'ini_TR_BP_cl0')
         res_path = os.path.join(self.__resDir__, 'ini_TR_BP_cl0_cl')
+        if not os.path.isdir(dir_path):
+            dir_path = os.path.join(self.__resDir__, 'ini_TR_cl0')
+            res_path = os.path.join(self.__resDir__, 'ini_TR_cl0_cl')
         
         os.mkdir(res_path)
 
@@ -902,7 +952,30 @@ class TrjCor(pt.AbstractBaseTool):
             print("######################", flush=True)
         
             im_bin = self.clean_image(im_bin, mark="II")
+
+            # cleaning outside the capillary
+            maskDir = 'manualMask'
+            if os.path.isdir(maskDir):
+                mask_tif = sorted([f for f in os.listdir(maskDir)
+                                   if (os.path.isfile(os.path.join(maskDir, f))
+                                       and ".tif" in f)
+                                   ])
     
+                print("Found directory {} with capillary mask: {}".
+                      format(maskDir, mask_tif[0], flush=True))
+    
+                path_file_mask = os.path.join(maskDir, mask_tif[0])
+                mask = io.imread(path_file_mask, plugin='tifffile')
+                im0Sh = im_bin.shape
+                mSh = mask.shape
+                if im0Sh[1:3] != mSh:
+                    print('Shape of the mask is {} '
+                          'and it does not match the shape of the image {}'.
+                          format(mSh, im0Sh), flush=True)
+                    sys.exit(2)
+    
+                im_bin[:, mask == 0] = 1
+
             im_bin *= 255
             
             file_res = os.path.join(res_path, file)
@@ -910,8 +983,13 @@ class TrjCor(pt.AbstractBaseTool):
             io.imsave(file_res, im_bin, plugin='tifffile')
             
     def phase9(self):
+        # subtrack
         dir_path = os.path.join(self.__resDir__, 'ini_TR_BP')
-    
+        time0fileDir = os.path.join(self.__resDir__, 'ini_TR_BP_cl0_cl')
+        if not os.path.isdir(dir_path):
+            dir_path = os.path.join(self.__resDir__, 'ini_TR')
+            time0fileDir = os.path.join(self.__resDir__, 'ini_TR_cl0_cl')
+
         resdir = '{}_subtr'.format(dir_path)
         os.mkdir(resdir)
     
@@ -919,8 +997,6 @@ class TrjCor(pt.AbstractBaseTool):
                             if (os.path.isfile(
                 os.path.join(dir_path, f)) and ".tif" in f)])
 
-        time0fileDir = os.path.join(self.__resDir__, 'ini_TR_BP_cl0_cl')
-        
         tif_files_from0 = sorted([f for f in os.listdir(time0fileDir)
                             if (os.path.isfile(
                 os.path.join(time0fileDir, f)) and ".tif" in f)])
@@ -965,59 +1041,82 @@ class TrjCor(pt.AbstractBaseTool):
             self.check_a_parameter('z2', lines)
         empty, wekaDir, description = \
             self.check_a_parameter('classModel', lines)
-        
+        empty, phases, description = \
+            self.check_a_parameter('phases', lines)
+
         z1 = int(z1)
         z2 = int(z2)
 
-        print("+++ Start phase1", flush=True)
+        if "1" in phases:
+            print("+++ Start phase1", flush=True)
+            # create voids from input directory and cropdata file
+            self.phase1(inputDir, z1, z2)
+        else:
+            print("--- Skip phase1", flush=True)
         
-        # create voids from input directory and cropdata file
-        self.phase1(inputDir, z1, z2)
-        
-        print("+++ Start phase2", flush=True)
-        
-        # segmenting voids
-        self.phase2(wekaDir)
+        if "2" in phases:
+            print("+++ Start phase2", flush=True)
+            # segmenting voids
+            self.phase2(wekaDir)
+        else:
+            print("--- Skip phase2", flush=True)
 
-        print("+++ Start phase3", flush=True)
+        if "3" in phases:
+            print("+++ Start phase3", flush=True)
+            # cleaning segmented voids
+            self.phase3()
+        else:
+            print("--- Skip phase3", flush=True)
+
+        if "4" in phases:
+            print("+++ Start phase4", flush=True)
+            # calculating center of mass in voids
+            self.phase4()
+        else:
+            print("--- Skip phase4", flush=True)
+
         
-        # cleaning segmented voids
-        self.phase3()
+        if "5" in phases:
+            print("+++ Start phase5", flush=True)
+            # apply rotation and translation
+            self.phase5()
+        else:
+            print("--- Skip phase5", flush=True)
         
-        print("+++ Start phase4", flush=True)
+        if "6" in phases:
+            print("+++ Start phase6", flush=True)
+            # apply bandpass filter
+            self.phase6()
+        else:
+            print("--- Skip phase6", flush=True)
+
         
-        # calculating center of mass in voids
-        self.phase4()
+        if "7" in phases:
+            print("+++ Start phase7", flush=True)
+            # segment time 0
+            self.phase7(wekaDir)
         
-        print("+++ Start phase5", flush=True)
+            print("Current time before manual cleaning {}".format(
+                strftime("%Y-%m-%d %H:%M:%S", localtime())), flush=True)
+            # clean segmented time 0
+            # probably manually
+            self.phase7p5()
+        else:
+            print("--- Skip phase7", flush=True)
         
-        # apply rotation and translation
-        self.phase5()
+        if "8" in phases:
+            print("+++ Start phase8", flush=True)
+            # remove small clusters from segmented time 0
+            self.phase8()
+        else:
+            print("--- Skip phase8", flush=True)
         
-        print("+++ Start phase6", flush=True)
-        
-        # apply bandpass filter
-        self.phase6()
-        
-        print("+++ Start phase7", flush=True)
-        # segment time 0
-        self.phase7(wekaDir)
-        
-        print("Current time before manual cleaning {}".format(
-            strftime("%Y-%m-%d %H:%M:%S", localtime())), flush=True)
-        # clean segmented time 0
-        # probably manually
-        self.phase7p5()
-        
-        print("+++ Start phase8", flush=True)
-        
-        # remove small clusters from segmented time 0
-        self.phase8()
-        
-        print("+++ Start phase9", flush=True)
-        
-        # subtrack
-        self.phase9()
+        if "9" in phases:
+            print("+++ Start phase9", flush=True)
+            # subtrack
+            self.phase9()
+        else:
+            print("--- Skip phase9", flush=True)
 
         print("End time {}".format(
             strftime("%Y-%m-%d %H:%M:%S", localtime())), flush=True)
