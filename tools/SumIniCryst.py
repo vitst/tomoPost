@@ -73,7 +73,8 @@ class SumIniCryst(pt.AbstractBaseTool):
         tmp = os.path.splitext(ini_tif_files[0])[0].split('_')
         resultFilename = "{}_{}_{}.tif".format(tmp[0], tmp[1], tmp[2])
         savef = os.path.join(outputDir, resultFilename)
-        io.imsave(savef, im0[4:-4,:,:], plugin='tifffile')
+        #io.imsave(savef, im0[4:-4,:,:], plugin='tifffile')
+        io.imsave(savef, im0, plugin='tifffile')
 
         tif_files = sorted([f for f in os.listdir(crystDir)
                             if (os.path.isfile(
@@ -99,7 +100,7 @@ class SumIniCryst(pt.AbstractBaseTool):
             
             # !!! initial image is 8 voxels larger in Z direction
             # !!! this is the result of TrjCor, see phase9()
-            stack_tif[im0[4:-4,:,:] != 0] = 255
+            stack_tif[im0 != 0] = 255
     
             resultFilename = "{}_{}_{}.tif".format(tmp[0], tmp[1], tmp[2])
             savef = os.path.join(outputDir, resultFilename)

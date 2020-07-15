@@ -96,8 +96,9 @@ class SegmentCryst(pt.AbstractBaseTool):
         #n_ = int(ags[3])
 
         # make output directoriry
-        cryst_dir = "{}_cryst".format(inputDir)
-        os.mkdir(cryst_dir)
+        #cryst_dir = "{}_cryst".format(inputDir)
+        #os.mkdir(cryst_dir)
+        os.mkdir(outputDir)
 
         # make temporary directorires
         temp_data_dir = "{}_tmp_split".format(inputDir)
@@ -207,7 +208,8 @@ class SegmentCryst(pt.AbstractBaseTool):
                                                              :, :]
                 current_min_pos = current_max_pos
     
-            savef = os.path.join(cryst_dir, rec_f_name)
+            #savef = os.path.join(cryst_dir, rec_f_name)
+            savef = os.path.join(outputDir, rec_f_name)
             io.imsave(savef, res[:, :, :], plugin='tifffile')
 
         rmtree(temp_data_dir)
