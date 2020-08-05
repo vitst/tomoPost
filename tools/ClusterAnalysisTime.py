@@ -135,11 +135,11 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
     # which is SCALE^2
     # it will count number of faces between voxels 1 and voxels 0
     def calc_surface_area(self, solidbin):
+
         KGG = self.N11(solidbin, self.KER)
         KGG[KGG == 6] = 0
         KGG = KGG[1: -1, 1: -1, 1: -1]
         # now only the surface pixels are not 0
-        
         # the number from 0 - 5 is a nearest 1 neighbors count. Next line will
         # convert it to the number of nearest 0 neighbors, which approximately
         # represents the surface area
@@ -173,20 +173,10 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
     
         lw, num = measurements.label(cr_bin)
         
-        #res = np.multiply(lw, prev_cryst_bin)
-        #elem_tot = np.unique(lw)
-        #elem = np.unique(res)
-    
-        #n_new_cl = elem_tot.shape[0] - elem.shape[0]
-    
-        #yarr = float(elem_tot.shape[0])
-
         minLab = np.min(lw)
         maxLab = np.max(lw)
         print("labels:  min: {}   max: {}".format(minLab, maxLab), flush=True)
         hist = measurements.histogram(lw, minLab + 1, maxLab, maxLab - minLab)
-        
-        #ss = np.sum(hist)
         
         # remove clusters below cutoff from count
         hist[ hist < cutoff ] = 0
@@ -200,7 +190,6 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
         if np.max(prev_cr_bin)>0:
             # remove all new crystal pixels
             no_new = np.multiply(lw, prev_cr_bin)
-            # remove all new crystal pixels
             no_new_hist = measurements.histogram(no_new,
                                                  minLab + 1,
                                                  maxLab,
@@ -209,7 +198,7 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
             no_new_hist[ no_new_hist !=0 ] = 1
             NoldMerged = np.sum(no_new_hist[np.nonzero(no_new_hist)])
             
-        print("  -------xN:  {}".format(NoldMerged))
+        print("  ---NoldMerged:  {}".format(NoldMerged))
         
         N_new = Ntotal - NoldMerged
 
@@ -242,7 +231,6 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
         colorsFit = ['g-', 'b-', 'r-', 'k-']
         colorsExperimental = ['go', 'bo', 'ro', 'ko']
 
-        '''
         # there should be only one file in initialDir
         iniDirFiles = sorted([f for f in os.listdir(initialDir)
                              if os.path.isfile(os.path.join(initialDir, f))
@@ -250,6 +238,7 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
         # read initial geometry (255 - solid glass beads, 0 - pore space)
         img0 = io.imread(os.path.join(initialDir, iniDirFiles[0]),
                          plugin='tifffile')
+
         # convert to binary (1 - solid glass beads, 0 - pore space)
         im0bin = img0.astype(bool).astype(np.int8)
         
@@ -260,13 +249,11 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
                       - np.sum(im0bin)
         
         print("Pore volume: {}".format(totPoreVol))
-        '''
 
         # get crystal file names
         crystalFiles = sorted([f for f in os.listdir(crystalDir)
                              if os.path.isfile(os.path.join(crystalDir, f))])
         
-        '''
         # get file names from pore dir
         poreFiles = sorted([f for f in os.listdir(poreDir)
                              if os.path.isfile(os.path.join(poreDir, f))])
@@ -274,126 +261,75 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
         # get file names from solid dir
         solidFiles = sorted([f for f in os.listdir(solidDir)
                              if os.path.isfile(os.path.join(solidDir, f))])
+
         # calculate surface area in initial sample
         Nsurf = self.calc_surface_area(im0bin)
+
+        #io.imsave('aux.tif', KGG, plugin='tifffile')
+        #exit(1)
         
         print("Surface area in A0: {}".format(Nsurf))
         print("ini file time: {} min".
               format( self.extract_time_from_filename(iniDirFiles[0]) ))
         
         # the current solid material (initial beads with crystals)
-        #solidBin = deepcopy(im0bin)
-        # auxiliary variable to calc increment in crystal voxels (initially - 0)
-        previousCrystals = np.zeros(im0bin.shape)
-        '''
-        img0TTTTT = io.imread(os.path.join(crystalDir, crystalFiles[0]),
-                         plugin='tifffile')
-        previousCrystals = np.zeros(img0TTTTT.shape)
-
         iniTime = 0
         Nprev=0
         
         axisX = np.empty(0)
         axisY = np.empty(0)
-        axisY1 = np.empty(0)
-        axisY2 = np.empty(0)
 
         axisX = np.append(axisX, iniTime)
-        #axisY = np.append(axisY, Nsurf)
-        axisY = np.append(axisY, 0)
+        axisY = np.append(axisY, Nsurf)
 
-        axisY1 = np.append(axisY1, 0)
-        #axisY2 = np.append(axisY2, Nsurf)
-
-
-        # initialize parallel
-        #pool = mp.Pool(int(mp.cpu_count()/2))
-        #results = [pool.apply(howmany_within_range, args=(row, 4, 8))
-        #           for row in data]
-        
         totN  = 0
-        totN1 = 0
-        xN = 0
         
-        #!!for i, file in enumerate(crystalFiles):
-        #for i, file in enumerate(solidFiles):
-        for i, file in enumerate(crystalFiles):
-            '''
+        for i, file in enumerate(solidFiles):
             # read files (solid at current moment are 255, rest - 0)
             filePath = os.path.join(solidDir, file)
             img = io.imread(filePath, plugin='tifffile')
             # convert img to binary: crystals - 1, rest - 0
-            imBin = img.astype(bool).astype(np.int8)
-            imBin, hist = self.filter_size(imBin, 1)
-            # apdate the solid part
-            #solidBin = np.add(im0bin, imBin)
-            '''
+            solidBin = img.astype(bool).astype(np.int8)
+
+            time = self.extract_time_from_filename(file)
+            #print("\ntime: {} minutes\n".format(time))
+            axisX = np.append(axisX, time)
+            
+            #print("Calcularing surface area of the solid")
+            currentSurf = self.calc_surface_area(solidBin)
+            axisY = np.append(axisY, currentSurf)
+            
+            # calculate total number of crystal voxels
+            #print("calculate total number of crystal voxels")
+            totPoreVol = solidBin.shape[0] * solidBin.shape[1] * solidBin.shape[2] \
+                       - np.sum(solidBin)
+            
+            print("{}    surf: {}  poreVol: {}".
+                  format(time, currentSurf, totPoreVol))
+
+        print("Analise crystals")
+        totN  = 0
+        totN1 = 0
+        #xN = 0
+        previousCrystals = np.zeros(im0bin.shape)
+
+        for i, file in enumerate(crystalFiles):
             # read crystal files (0 - pore and glass, 255 - crystals)
-            filePath = os.path.join(crystalDir, crystalFiles[i])
+            filePath = os.path.join(crystalDir, file)
             imgCr = io.imread(filePath, plugin='tifffile')
             # convert img to binary: crystals - 1, rest - 0
             imCrBin = imgCr.astype(bool).astype(np.int8)
             #merge with previous
             imCrBin = np.logical_or(imCrBin, previousCrystals)
             imCrBin = imCrBin.astype(np.int8)
-            
-            # filter out small as noize (clusters smaller then 2)
-            imCrBin, hist = self.filter_size(imCrBin, 1)
-            print("3D tomo image dimensions: {}".format(imCrBin.shape))
-            
 
-            # read pore files (0 - solid, the rest is in float numbers
-            # - the size of the pore in voxels)
-            #porePath = os.path.join(poreDir, poreFiles[i])
-            #poreImg = io.imread(porePath, plugin='tifffile')
-            
-            ########################
-            # calculation of additional volume information
-            #!!previousCrystals = np.multiply(previousCrystals, imBin)
-            # new crystal voxels for this time
-            #addCryst = np.subtract(imBin, previousCrystals)
-            #addCryst[addCryst < 0] = 0
-            ########################
-            
+
             time = self.extract_time_from_filename(file)
             print("\ntime: {} minutes\n".format(time))
-            
 
-            '''
-            #currentSurf = self.calc_surface_area(solidBin)
-            #yVal = np.sum(imBin) # total amount of crystal voxels
-            # total number of clusters
-            cutoff = 10
-            yVal, N_plus, N_minus \
-                = self.N_clusters(imBin, previousCrystals, Nprev, cutoff)
-            Nprev = yVal
-            '''
-            
-            '''
-            #yVal = self.calc_surface_area(imBin)
-            print("Calcularing surface area of the crystalls")
-            yVal = self.calc_surface_area(imCrBin)
 
-            #!!dtime = time - iniTime
-            #!!iniTime = time
-            
-            axisX = np.append(axisX, time)
-            axisY = np.append(axisY, yVal)
-            
-            # calculate total number of crystal voxels
-            print("calculate total number of crystal voxels")
-            totalCryst = np.sum(imCrBin)
-            axisY1 = np.append(axisY1, totalCryst)
-            
-            print("Calcularing surface area of the solid")
-            surfAll = self.calc_surface_area(imBin)
-            axisY2 = np.append(axisY2, surfAll)
-            
-            print("    surfCr: {}  volCr: {}  surfAll: {}".
-                  format(yVal, totalCryst, surfAll))
-            '''
             # total number of clusters
-            cutoff1 = 10
+            cutoff1 = 0
             totN, N_new, N_merged \
                 = self.N_clusters(imCrBin, previousCrystals, totN1, cutoff1)
 
@@ -405,7 +341,11 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
             totN1 = totN
             previousCrystals = deepcopy(imCrBin)
 
+            
+
         exit(0)
+
+
         plt.plot(axisX, axisY, "ko")
         plt.plot(axisX, axisY1, "ro")
         plt.plot(axisX, axisY2, "bo")
