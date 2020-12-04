@@ -16,7 +16,7 @@ Postprocessing tools for tomography data
 * Download and install Anaconda3. Example:
 ```bash
 wget https://repo.anaconda.com/archive/Anaconda3-2020.11-MacOSX-x86_64.sh
-chmod -x Anaconda3-2020.11-MacOSX-x86_64.sh
+chmod +x Anaconda3-2020.11-MacOSX-x86_64.sh
 ./Anaconda3-2020.11-MacOSX-x86_64.sh
 ... follow instructions ...
 ```
