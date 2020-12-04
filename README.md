@@ -45,21 +45,21 @@ git clone https://github.com/vitst/tomoPost
 
 Optional
 
-	* Create executable and add it to env path in `.bashrc`
-	```bash
-	cd /local_directory/tomoPost
-	mkdir bin
-    cd bin
-	```
-	* Create a file `runTomo` with:
-    ```bash
-    #!/bin/bash
-    python3 /path_to/local_directory/tomoPost/runPostTomo.py "$@"
-    ```
-	* Add it to env path in `.bashrc`
-	```bash
-	export PATH=/path_to/local_directory/tomoPost/bin:$PATH
-	```
+* Create executable and add it to env path in `.bashrc`
+```bash
+cd /local_directory/tomoPost
+mkdir bin
+cd bin
+```
+* Create a file `runTomo` with:
+```bash
+#!/bin/bash
+python3 /path_to/local_directory/tomoPost/runPostTomo.py "$@"
+```
+* Add it to env path in `.bashrc`
+```bash
+export PATH=/path_to/local_directory/tomoPost/bin:$PATH
+```
 
 * test tomo
 
