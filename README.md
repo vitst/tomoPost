@@ -61,7 +61,10 @@ python3 /path_to/local_directory/tomoPost/runPostTomo.py "$@"
 export PATH=/path_to/local_directory/tomoPost/bin:$PATH
 ```
 
-* test tomo
+* test tomoPost
+```bash
+runTomo -h
+```
 
 # Using WEKA segmentation
 
