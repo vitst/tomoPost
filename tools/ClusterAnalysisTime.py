@@ -175,7 +175,7 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
         
         minLab = np.min(lw)
         maxLab = np.max(lw)
-        print("labels:  min: {}   max: {}".format(minLab, maxLab), flush=True)
+        #print("labels:  min: {}   max: {}".format(minLab, maxLab), flush=True)
         hist = measurements.histogram(lw, minLab + 1, maxLab, maxLab - minLab)
         
         # remove clusters below cutoff from count
@@ -198,7 +198,7 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
             no_new_hist[ no_new_hist !=0 ] = 1
             NoldMerged = np.sum(no_new_hist[np.nonzero(no_new_hist)])
             
-        print("  ---NoldMerged:  {}".format(NoldMerged))
+        #print("  ---NoldMerged:  {}".format(NoldMerged))
         
         N_new = Ntotal - NoldMerged
 
@@ -280,7 +280,8 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
         axisY = np.empty(0)
 
         axisX = np.append(axisX, iniTime)
-        axisY = np.append(axisY, Nsurf)
+        #axisY = np.append(axisY, Nsurf)
+        axisY = np.append(axisY, 0)
 
         totN  = 0
         
@@ -297,7 +298,7 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
             
             #print("Calcularing surface area of the solid")
             currentSurf = self.calc_surface_area(solidBin)
-            axisY = np.append(axisY, currentSurf)
+            #axisY = np.append(axisY, currentSurf)
             
             # calculate total number of crystal voxels
             #print("calculate total number of crystal voxels")
@@ -325,16 +326,18 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
 
 
             time = self.extract_time_from_filename(file)
-            print("\ntime: {} minutes\n".format(time))
+            #print("\ntime: {} minutes\n".format(time))
 
+            totalCryst = np.sum( imCrBin )
 
             # total number of clusters
-            cutoff1 = 0
+            cutoff1 = 3
             totN, N_new, N_merged \
                 = self.N_clusters(imCrBin, previousCrystals, totN1, cutoff1)
+            axisY = np.append(axisY, totN)
 
-            print("    ++  totalClust: {}  Nnew: {}  Nmerged: {}  +++++".
-                  format(totN, N_new, N_merged))
+            print("{}    ++  totalClust: {}  Nnew: {}  Nmerged: {}  +++++".
+                  format(time, totN, N_new, N_merged))
 
             #!!axisY1 = np.append(axisY1, N_plus)
             #!!axisY2 = np.append(axisY2, N_minus)
@@ -343,22 +346,19 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
 
             
 
-        exit(0)
-
-
         plt.plot(axisX, axisY, "ko")
-        plt.plot(axisX, axisY1, "ro")
-        plt.plot(axisX, axisY2, "bo")
+        #plt.plot(axisX, axisY1, "ro")
+        #plt.plot(axisX, axisY2, "bo")
 
         #plt.xscale('log')
         #plt.yscale('log')
         plt.tight_layout()
-        plt.show()
+        #plt.show()
         
         # file names
-        res_file_name = "surfaceVolume.png"
+        res_file_name = "res.png"
         res_file_path = os.path.join(outputDir,res_file_name)
-        #plt.savefig(res_file_path, format='png', dpi=300)
+        plt.savefig(res_file_path, format='png', dpi=300)
         #plt.savefig(res_file_path, format='pdf', dpi=300)
 
         print("End time {}".format(
