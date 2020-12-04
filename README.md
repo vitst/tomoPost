@@ -44,6 +44,7 @@ git clone https://github.com/vitst/tomoPost
 ```
 
 Optional
+
 	* Create executable and add it to env path in `.bashrc`
 	```bash
 	cd /local_directory/tomoPost
