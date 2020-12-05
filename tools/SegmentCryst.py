@@ -157,7 +157,7 @@ class SegmentCryst(pt.AbstractBaseTool):
                 top = min(img.shape[0], (j + 1) * slice_size + 5)
                 if j == (n_ - 1) and top < (img.shape[0] - 1):
                     top = img.shape[0] - 1
-                io.imsave(savef, img[bottom:top, :, :].astype(np.uint16), plugin='tifffile')
+                io.imsave(savef, img[bottom:top, :, :], plugin='tifffile')
     
             # comparing the time of current file and classifier
             
