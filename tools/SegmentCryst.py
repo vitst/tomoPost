@@ -116,6 +116,7 @@ class SegmentCryst(pt.AbstractBaseTool):
 
         n_layers = 50
         # read one file to get the shape of the arrays
+        print("Test image file name: {}".format(data_files[0]))
         test_img = \
             io.imread(os.path.join(inputDir, data_files[0]), plugin='tifffile')
         sizeZ = test_img.shape[0]
