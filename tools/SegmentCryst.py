@@ -112,7 +112,7 @@ class SegmentCryst(pt.AbstractBaseTool):
 
         # get data file names
         data_files = sorted([f for f in os.listdir(inputDir)
-                             if os.path.isfile(os.path.join(inputDir, f))])
+                             if (os.path.isfile(os.path.join(inputDir, f)) and ".tif" in f)])
 
         n_layers = 50
         # read one file to get the shape of the arrays
