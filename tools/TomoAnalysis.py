@@ -51,32 +51,45 @@ class TomoAnalysis(pt.AbstractBaseTool):
         # the format for parameters: [name, initial_value, description]
         self.parameters.append(
             ['initialDir',
-             'initial',
-             'a directory with initial file - the segmented tomo image,'
-             'when there is no precipitation. 0 - pore space, 1 - '
-             'solid material']
+             '01_zero',
+             ':Directory with initial file - the segmented tomo image, '
+             'no precipitation. 0 - pore space, 255 - solid material']
         )
-        
-        self.parameters.append(
-            ['poreDir',
-             'pores',
-             'directory with TIFF files where the values are '
-             'the size of the pores']
-        )
-        
+
         self.parameters.append(
             ['crystalDir',
-             'time_crystals',
-             'the directory which contains segmented images '
-             'where crystals are 1, the rest is 0']
+             '02_crystals',
+             ':Directory which contains segmented images '
+             'where crystals are 255, the rest is 0']
         )
-        
+
+        self.parameters.append(
+            ['poreDir',
+             '03_pores',
+             ':Directory with TIFF files where the values are float numbers '
+             'the size of the pores in voxels']
+        )
+
+        self.parameters.append(
+            ['solidDir',
+             '04_solid',
+             ':Directory with merged crystals and glass: '
+             '255 - pore space, 0 - the rest (solid material)']
+        )
+
+        self.parameters.append(
+            ['cfdDir',
+             '05_CFDfields',
+             ':Directory with CFD fields TIFF files']
+        )
+
         self.parameters.append(
             ['outputDir',
-             'resultDir',
-             'directory where the final files will be placed']
+             'res',
+             ':Directory where the final files will be placed']
         )
-        
+
+
 
         '''
         Define initial kernel which will be used to calculate
@@ -115,6 +128,27 @@ class TomoAnalysis(pt.AbstractBaseTool):
                 break
         
         return exp_time
+
+    # calculate surface area between 0 and 1 in surface units
+    # which is SCALE^2
+    # it will count number of faces between voxels 1 and voxels 0
+    def calc_surface_area(self, solidbin):
+
+        KGG = self.N11(solidbin, self.KER)
+        KGG[KGG == 6] = 0
+        KGG = KGG[1: -1, 1: -1, 1: -1]
+        # now only the surface pixels are not 0
+        # the number from 0 - 5 is a nearest 1 neighbors count. Next line will
+        # convert it to the number of nearest 0 neighbors, which approximately
+        # represents the surface area
+        KGG = 6 - KGG
+        KGG[KGG == 6] = 0
+        #print("min KGG: {}  max KGG: {}".format(np.min(KGG), np.max(KGG)))
+
+        surfArea = np.sum(KGG)
+        
+        return surfArea
+
     
     def plot_nCryst_per_surf(self, KGG, im_bin):
         slice_size = 10
@@ -188,115 +222,6 @@ class TomoAnalysis(pt.AbstractBaseTool):
     
         return xarr[1:-1], yarr[1:-1]
 
-    def plot_nucleation(self, im0_bin, tot_cryst_bin, prev_cryst_bin, add_cryst_bin):
-        slice_size = 10
-        NN = int(im0_bin.shape[0] / slice_size) + 1
-        
-        newCrystOnGlass = self.N12(add_cryst_bin, im0_bin, self.KER)
-        newCrystOnGlass[newCrystOnGlass == 6] = 0
-        newCrystOnGlass = newCrystOnGlass.astype(bool).astype(np.int8)
-        
-        newCrystOnCryst = np.subtract(add_cryst_bin, newCrystOnGlass)
-        newCrystOnCryst[newCrystOnCryst == -1] = 0
-        newCrystOnCryst = newCrystOnCryst.astype(bool).astype(np.int8)
-
-        xarr = []
-        yarr = []
-        for ii in range(NN):
-            bottom = ii * slice_size
-            top = min(im0_bin.shape[0], (ii + 1) * slice_size)
-        
-            if top <= bottom:
-                break
-        
-            # pore = np.sum(im0_bin[bottom:top, :, :])
-            #surf = np.sum(KGG[bottom:top, :, :])
-            nCG = np.sum(newCrystOnGlass[bottom:top, :, :])
-            nCC = np.sum(newCrystOnCryst[bottom:top, :, :])
-        
-            # in um
-            hight = (im0_bin.shape[0] - bottom - slice_size / 2) * self.SCALE
-        
-            xarr.append(hight)
-            yarr.append( float(nCC) )
-    
-        xarr = np.asarray(xarr)
-        yarr = np.asarray(yarr)
-    
-        return xarr[1:-1], yarr[1:-1]
-
-    def plot_clusters(self, im0_bin, tot_cryst_bin, prev_cryst_bin,
-                        add_cryst_bin):
-        slice_size = 50
-        NN = int(im0_bin.shape[0] / slice_size) + 1
-
-        lw, num = measurements.label(tot_cryst_bin)
-        res = np.multiply(lw, prev_cryst_bin)
-
-        xarr = []
-        yarr = []
-        for ii in range(NN):
-            bottom = ii * slice_size
-            top = min(im0_bin.shape[0], (ii + 1) * slice_size)
-        
-            if top <= bottom:
-                break
-        
-            # pore = np.sum(im0_bin[bottom:top, :, :])
-            # surf = np.sum(KGG[bottom:top, :, :])
-            #lw, num = measurements.label(tot_cryst_bin[bottom:top, :, :])
-            elem_tot = np.unique(lw[bottom:top, :, :])
-            elem = np.unique(res[bottom:top, :, :])
-            
-            n_new_cl = elem_tot.shape[0] - elem.shape[0]
-
-            # in um
-            hight = (im0_bin.shape[0] - bottom - slice_size / 2) * self.SCALE
-        
-            xarr.append(hight)
-            #yarr.append(float(elem.shape[0]-1))
-            yarr.append(float(n_new_cl))
-    
-        xarr = np.asarray(xarr)
-        yarr = np.asarray(yarr)
-    
-        return xarr, yarr
-        #return xarr[:-1], yarr[1:-1]
-
-    def plot_clusters1(self, im0_bin, tot_cryst_bin, prev_cryst_bin,
-                      add_cryst_bin):
-    
-        lw, num = measurements.label(tot_cryst_bin)
-        res = np.multiply(lw, prev_cryst_bin)
-    
-        elem_tot = np.unique(lw)
-        elem = np.unique(res)
-    
-        n_new_cl = elem_tot.shape[0] - elem.shape[0]
-    
-        yarr = float(n_new_cl)
-    
-        return yarr
-
-    def cluster_hist(self, tot_cryst_bin):
-        num_bins = 100
-    
-        lw, num = measurements.label(tot_cryst_bin)
-        
-        print("type lw: {}".format(lw.dtype))
-        
-        minLab = np.min(lw[np.nonzero(lw)])
-        maxLab = np.max(lw[np.nonzero(lw)])
-
-        hist1, bin_edges1 = np.histogram(lw, bins=100000, range=(1, 100000))
-        
-        print("min cl w: {}   max cl w: {}".format(minLab, maxLab))
-        
-        hist, bin_edges = np.histogram(hist1[np.nonzero(hist1)], bins=num_bins, range=(1, 200))
-
-        be = bin_edges[:-1] + (bin_edges[1] - bin_edges[0])/2.0
-
-        return be, hist
 
     def plot_Ncryst_vsPoreSize(self, im_bin_cryst, im_pore):
         #minPore = self.SCALE * np.min(im_pore)
@@ -310,165 +235,192 @@ class TomoAnalysis(pt.AbstractBaseTool):
         lw, num = measurements.label(im_bin_cryst)
         minLab = np.min(lw)
         maxLab = np.max(lw)
+        print("Number of features: {}".format(num))
         print("labels:  min: {}   max: {}".format(minLab, maxLab), flush=True)
         hist = measurements.histogram(lw, minLab + 1, maxLab, maxLab - minLab)
-        for i1, size in enumerate(hist):
-            if size < 10:
-                im_bin_cryst[ im_bin_cryst==i1 ]=0
-        
-        hist_pores, bin_edges_pores =\
+
+        #for i1, size in enumerate(hist):
+        #    if size < 2: #10
+        #        im_bin_cryst[ im_bin_cryst==i1 ] = 0
+        #a = [0 if a_ > thresh else a_ for a_ in a]
+
+
+        #in_list_hist = hist < 10
+        #im_bin_cryst1 = [0 if (element in in_list_hist) else element for element in im_bin_cryst]
+        #im_bin_cryst[ in_list ] = 0
+
+        #in_list_hist = np.where( np.isin(L,R) )
+        # cut out clusters that are smaller than 10
+        in_list_hist = np.where( hist < 10 )
+        lw1 = np.where( np.isin(lw, in_list_hist[0]), 0, lw)
+         
+        im_bin_cryst1 = np.where( np.isin(lw, in_list_hist[0]), 0, im_bin_cryst)
+        print( "0: min: {}    max: {}".format( np.min(im_bin_cryst), np.max(im_bin_cryst)) )
+        print( "1: min: {}    max: {}".format( np.min(im_bin_cryst1), np.max(im_bin_cryst1)) )
+        print( "sum 0: {}".format(np.sum(im_bin_cryst)) )
+        print( "sum 1: {}".format(np.sum(im_bin_cryst1)) )
+
+        hist_pores, bin_edges_pores = \
             np.histogram(im_pore, bins=num_bin, range=(minPore, maxPore))
+
+        print( "Pore 0: min: {}    max: {}".format( minPore, maxPore) )
         
-        CP = np.multiply(im_bin_cryst, im_pore)
+        CP = np.multiply(im_bin_cryst1, im_pore)
+        minPore1 = np.min(im_pore[np.nonzero(CP)])
+        maxPore1 = np.max(im_pore[np.nonzero(CP)])
+        print( "Pore 1: min: {}    max: {}\n".format( minPore1, maxPore1) )
+        print( "sum binCP: {}\n".format(np.sum(CP.astype(bool).astype(np.int8))) )
+
+        tot_cr = np.sum(im_bin_cryst1)
+        tot_cr1 = np.sum(CP.astype(bool).astype(np.int8))
 
         hist, bin_edges = \
             np.histogram(CP, bins=num_bin, range=(minPore, maxPore))
+
+
+        print( "sum totHist: {}".format(np.sum(hist)) )
         
         be = bin_edges[:-1] + (bin_edges[1] - bin_edges[0])/2.0
         
+        print( tot_cr )
+        #exit(0)
+        
+        ret_hist = hist / tot_cr1
         #ret_hist = np.divide(hist, hist_pores)
-        ret_hist = hist_pores
+        #ret_hist = hist_pores
+
+        print( "sum hist: {}".format(np.sum(ret_hist)) )
+        print("*************************************************\n")
 
         return be, ret_hist
-        
         
 
     def execute(self, dictFileName):
         print('Starting {0:s} tool'.format(self.__toolName__), flush=True)
-        
         print("Start time {}\n".format(
             strftime("%Y-%m-%d %H:%M:%S", localtime())), flush=True)
         
+        # reading parameters from dictionary
         lines = self.read_dict(dictFileName)
         empty, initialDir, description = \
             self.check_a_parameter('initialDir', lines)
-        empty, poreDir, description = \
-            self.check_a_parameter('poreDir', lines)
         empty, crystalDir, description = \
             self.check_a_parameter('crystalDir', lines)
+        empty, poreDir, description = \
+            self.check_a_parameter('poreDir', lines)
+        empty, solidDir, description = \
+            self.check_a_parameter('solidDir', lines)
+        empty, cfdDir, description = \
+            self.check_a_parameter('cfdDir', lines)
         empty, outputDir, description = \
             self.check_a_parameter('outputDir', lines)
         
+        # variables for plotting
+        colorsFit = ['g-', 'b-', 'r-', 'k-']
+        colorsExperimental = ['go', 'bo', 'ro', 'ko']
+
+        ###########################
+        ##  file reading
+        ###########################
+       
         # there should be only one file in initialDir
-        ini_dir_files = sorted([f for f in os.listdir(initialDir)
+        iniDirFiles = sorted([f for f in os.listdir(initialDir)
                              if os.path.isfile(os.path.join(initialDir, f))
                                 and '.tif' in f])
-        img0 = io.imread(os.path.join(initialDir,ini_dir_files[0]),
+        # read initial geometry (255 - solid glass beads, 0 - pore space)
+        img0 = io.imread(os.path.join(initialDir, iniDirFiles[0]),
                          plugin='tifffile')
-        
-        im0_bin = img0.astype(bool).astype(np.int8)
-        
-        pore_volume = im0_bin.shape[0] * im0_bin.shape[1] * im0_bin.shape[2] \
-                      - np.sum(im0_bin)
-        
-        print("Pore volume: {}".format(pore_volume))
 
-        # get data file names
-        crystal_files = sorted([f for f in os.listdir(crystalDir)
+        # convert to binary (1 - solid glass beads, 0 - pore space)
+        im0bin = img0.astype(bool).astype(np.int8)
+        
+        print("3D tomo image dimensions: {}".format(im0bin.shape))
+
+        # total pore volume in voxels
+        totPoreVol = im0bin.shape[0] * im0bin.shape[1] * im0bin.shape[2] \
+                      - np.sum(im0bin)
+        
+        print("Pore volume: {}".format(totPoreVol))
+
+        # get crystal file names
+        crystalFiles = sorted([f for f in os.listdir(crystalDir)
                              if os.path.isfile(os.path.join(crystalDir, f))])
         
         # get file names from pore dir
-        pore_files = sorted([f for f in os.listdir(poreDir)
+        poreFiles = sorted([f for f in os.listdir(poreDir)
                              if os.path.isfile(os.path.join(poreDir, f))])
+        
+        # get file names from solid dir
+        solidFiles = sorted([f for f in os.listdir(solidDir)
+                             if os.path.isfile(os.path.join(solidDir, f))])
 
-        KGG = self.N11(im0_bin, self.KER)
-        KGG[KGG == 6] = 0
-        # only the surface pixels are not 0
-        KGG = KGG.astype(bool).astype(np.int8)
-        # number of surface voxels
-        Nsv = np.sum(KGG)
-        print("Number of surface voxels: {}".format(Nsv))
+        if os.path.exists(cfdDir):
+            # get CFD tiff filenames
+            if os.path.exists(os.path.join(cfdDir,'C_Bosbach')):
+                cfdFilesCbos = sorted([f for f in os.listdir(os.path.join(cfdDir,'C_Bosbach'))
+                            if os.path.isfile(os.path.join(cfdDir,'C_Bosbach', f))])
+                cfdFilesUbos = sorted([f for f in os.listdir(os.path.join(cfdDir,'U_Bosbach'))
+                            if os.path.isfile(os.path.join(cfdDir,'U_Bosbach', f))])
+    
+            cfdFilesCzh = sorted([f for f in os.listdir(os.path.join(cfdDir,'C_ZhenWu'))
+                        if os.path.isfile(os.path.join(cfdDir,'C_ZhenWu', f))])
+            cfdFilesUzh = sorted([f for f in os.listdir(os.path.join(cfdDir,'U_ZhenWu'))
+                        if os.path.isfile(os.path.join(cfdDir,'U_ZhenWu', f))])
+
+        ###########################
+        ##  calculations
+        ###########################
+
+        # calculate surface area in initial sample
+        Nsurf = self.calc_surface_area(im0bin)
+
+        print("Surface area in A0: {}".format(Nsurf))
         print("ini file time: {} min".
-              format( self.extract_time_from_filename(ini_dir_files[0]) ))
+              format( self.extract_time_from_filename(iniDirFiles[0]) ))
         
-        colors = ['g-', 'b-', 'r-', 'k-']
-        colors1 = ['go', 'bo', 'ro', 'ko']
+        # the current solid material (initial beads with crystals)
+        iniTime = 0
+        Nprev=0
         
-        solid_bin = deepcopy(im0_bin)
-        previous_crystals = np.zeros(im0_bin.shape)
-        ini_time = 0
-        
-        #axX1=[]
-        #axY1=[]
-        
-        j = 0
+        axisX = np.empty(0)
+        axisY = np.empty(0)
 
-        for i, file in enumerate(crystal_files):
+        axisX = np.append(axisX, iniTime)
+        #axisY = np.append(axisY, Nsurf)
+        axisY = np.append(axisY, 0)
+
+        totN  = 0
+        
+        for i, file_n in enumerate(crystalFiles):
             
-            file_path = os.path.join(crystalDir, file)
+            file_path = os.path.join(crystalDir, file_n)
             img = io.imread(file_path, plugin='tifffile')
-            # crystals are 1, rest - 0
-            im_bin = img.astype(bool).astype(np.int8)
+            # crystals are 255, rest - 0
+            cryst_bin = img.astype(bool).astype(np.int8)
+
+            time = self.extract_time_from_filename(file_n)
+            print("time: {} minutes".format(time))
             
-            # read pore files
-            pore_path = os.path.join(poreDir, pore_files[i])
+            # read pore files for the previous time
+            # Note: pore file dir have one more ini time file
+            pore_path = os.path.join(poreDir, poreFiles[i])
             pore_img = io.imread(pore_path, plugin='tifffile')
             
-            # number of crystal voxels
-            #nCryst = np.sum(im_bin)
+            axX, axY = self.plot_Ncryst_vsPoreSize(cryst_bin, pore_img)
 
-            fnm = file.split("_")
-            time = 0
-            for ww in fnm:
-                if "min" in ww:
-                    time = int(ww[:-3])
+            plt.plot(axX,axY, colorsExperimental[i], label='t={}'.format(time))
 
-            print("{}   time: {} min".format(i, time))
-
-            #axX, axY = self.plot_pore_vs_h(pore_img)
-            
-            #axX, axY = self.plot_nCryst_per_surf(KGG, im_bin)
-            
-            axX, axY = self.plot_Ncryst_vsPoreSize(im_bin, pore_img)
-
-            #previous_crystals = np.multiply(previous_crystals, im_bin)
-            #add_cryst = np.subtract(im_bin, previous_crystals)
-            #add_cryst[add_cryst < 0] = 0
-            #axX, axY = self.plot_nucleation(im0_bin, im_bin,
-            #                                previous_crystals, add_cryst)
-            #axY = self.plot_clusters1(im0_bin, im_bin,
-            #                                previous_crystals, add_cryst)
-            #axX, axY = self.cluster_hist(im_bin)
-            #previous_crystals = im_bin
-            
-            dtime = time - ini_time
-            #axY = axY / dtime
-            ini_time = time
-            
-            #axX1.append(time)
-            #axY1.append(axY)
-
-            #YY1 = np.polyfit(axX, axY, 3)
-            #pf = np.poly1d(YY1)
-            #pfX = np.linspace(axX[0], axX[-1], 100)
-            #plt.plot(pfX, pf(pfX), colors[i])
-
-            if i%3==0:
-                print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-                plt.plot(axX, axY, colors1[j], label='t={}'.format(time))
-                j=j+1
-            
-            #solid_bin = np.add(im0_bin, im_bin)
-            #break
-
-        #axX1 = np.asarray(axX1)
-        #axY1 = np.asarray(axY1)
-        #plt.plot(axX1, axY1, colors1[i])
         
         plt.xscale('log')
         plt.yscale('log')
         plt.tight_layout()
-        plt.show()
-        #res_file_name = "Ncr_perSurfperdt_vsH.png"
-        #res_file_name = "meanPoreSize_vs_H.png"
-        #res_file_name = "Surf_vsH.png"
-        
-        res_file_name = "histPoreSize.png"
-        #res_file_name = "Ncr_perPoreVol_vsSize.png"
-        res_file_path = os.path.join(outputDir,res_file_name)
-        #plt.savefig(res_file_path, format='png', dpi=300)
-        #plt.savefig(res_file_name, format='pdf', dpi=300)
+        #plt.show()
 
+        #res_file_name = "histPoreSize.png"
+        res_file_name = "Ncr_perPoreVol_vsSize.png"
+        res_file_path = os.path.join(outputDir,res_file_name)
+        plt.savefig(res_file_path, format='png', dpi=300)
+        #plt.savefig(res_file_name, format='pdf', dpi=300)
 
         print("End time {}".format(
             strftime("%Y-%m-%d %H:%M:%S", localtime())), flush=True)

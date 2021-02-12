@@ -30,15 +30,19 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
     '''
     Cluster analysis of the crystal growth tomography data
     
-    It is expected the next ordering in the current directory:
-    1) initial geometry: 1 - glass beads; 0 - pore space
-    ./initial/
-    2) distribution of pore sizes in each voxel
-    ./pores/
-    3) crystal positions: 1 - crystals; 0 - the rest
-    ./time_crystals/
-    4) directory for result files
-    ./resultDir/
+    By default it is expected the next ordering in the current directory:
+    1) initial geometry: 255 - glass beads; 0 - pore space
+    ./01_zero/
+    2) only crystals:  255 - crystals; 0 - the rest
+    ./02_crystals/
+    3) pore distribution from local thickness tool: float number = pore size
+    ./03_pores/
+    4) solid and pores: 255 - glass beads and crystals; 0 - pore space
+    ./04_solid/
+    
+    Optional:
+    5)  
+    ./05_CFDfields
     
     This tool is designed to plot global variables averaged or calculated for
     the whole sample versus time
@@ -60,30 +64,35 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
         self.parameters.append(
             ['initialDir',
              '01_zero',
-             ':Directory with initial file - the segmented tomo image,'
-             'when there is no precipitation. 0 - pore space, 1 - '
-             'solid material']
+             ':Directory with initial file - the segmented tomo image, '
+             'no precipitation. 0 - pore space, 255 - solid material']
         )
         
         self.parameters.append(
             ['crystalDir',
              '02_crystals',
              ':Directory which contains segmented images '
-             'where crystals are 1, the rest is 0']
+             'where crystals are 255, the rest is 0']
         )
 
         self.parameters.append(
             ['poreDir',
              '03_pores',
-             ':Directory with TIFF files where the values are '
+             ':Directory with TIFF files where the values are float numbers '
              'the size of the pores in voxels']
         )
         
         self.parameters.append(
             ['solidDir',
              '04_solid',
-             ':Directory with TIFF files where the values are '
-             'the size of the pores']
+             ':Directory with merged crystals and glass: '
+             '255 - pore space, 0 - the rest (solid material)']
+        )
+        
+        self.parameters.append(
+            ['cfdDir',
+             '05_CFDfields',
+             ':Directory with CFD fields TIFF files']
         )
 
         self.parameters.append(
@@ -224,12 +233,18 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
             self.check_a_parameter('poreDir', lines)
         empty, solidDir, description = \
             self.check_a_parameter('solidDir', lines)
+        empty, cfdDir, description = \
+            self.check_a_parameter('cfdDir', lines)
         empty, outputDir, description = \
             self.check_a_parameter('outputDir', lines)
         
         # variables for plotting
         colorsFit = ['g-', 'b-', 'r-', 'k-']
         colorsExperimental = ['go', 'bo', 'ro', 'ko']
+
+        ###########################
+        ##  file reading
+        ###########################
 
         # there should be only one file in initialDir
         iniDirFiles = sorted([f for f in os.listdir(initialDir)
@@ -262,12 +277,24 @@ class ClusterAnalysisTime(pt.AbstractBaseTool):
         solidFiles = sorted([f for f in os.listdir(solidDir)
                              if os.path.isfile(os.path.join(solidDir, f))])
 
+        # get CFD tiff filenames
+        cfdFilesCbos = sorted([f for f in os.listdir(cfdDir)
+                    if os.path.isfile(os.path.join(solidDir,'C_Bosbach', f))])
+        cfdFilesUbos = sorted([f for f in os.listdir(cfdDir)
+                    if os.path.isfile(os.path.join(solidDir,'U_Bosbach', f))])
+
+        cfdFilesCzh = sorted([f for f in os.listdir(cfdDir)
+                    if os.path.isfile(os.path.join(solidDir,'C_ZhenWu', f))])
+        cfdFilesUzh = sorted([f for f in os.listdir(cfdDir)
+                    if os.path.isfile(os.path.join(solidDir,'U_ZhenWu', f))])
+
+        ###########################
+        ##  calculations
+        ###########################
+
         # calculate surface area in initial sample
         Nsurf = self.calc_surface_area(im0bin)
 
-        #io.imsave('aux.tif', KGG, plugin='tifffile')
-        #exit(1)
-        
         print("Surface area in A0: {}".format(Nsurf))
         print("ini file time: {} min".
               format( self.extract_time_from_filename(iniDirFiles[0]) ))
