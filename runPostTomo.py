@@ -18,15 +18,12 @@ for filename in os.listdir(package_path):
                       modulename)
         listOfAllTools.update({obj().__toolName__: obj})
 
-short_description = "\nThis is a collection of tools to postprocess X-ray " \
+short_description = "This is a collection of tools to postprocess X-ray " \
                     "tomography data."
 
 description = '''
   {0:s}\n
-  
-  
-  
-  Usage:
+usage:
 
     name of the tool(tool: *name*)
     list of parameters (*name*: *value*)
@@ -37,7 +34,6 @@ description = '''
 
   To see parameters for correctTilt tool:
     `./runTomo -i correctTilt`
-
 '''.format(short_description)
 
 
