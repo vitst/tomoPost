@@ -157,6 +157,9 @@ class Tomo2MeshML(pt.AbstractBaseTool):
             # the difference between ML and my results: cryst colors are invert
             #stack_tif = np.logical_not(stack_tif.astype(bool)).astype(np.uint8)
             stack_tif = stack_tif.astype(bool).astype(np.uint8)
+            NZ = stack_tif.shape[0]
+            NY = stack_tif.shape[1]
+            NX = stack_tif.shape[2]
 
             aux = np.ones((NZ, NY + 30, NX + 30))
             aux[:, 15:NY + 15, 15:NX + 15] = stack_tif
