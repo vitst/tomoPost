@@ -157,11 +157,15 @@ class Tomo2MeshML(pt.AbstractBaseTool):
             # the difference between ML and my results: cryst colors are invert
             #stack_tif = np.logical_not(stack_tif.astype(bool)).astype(np.uint8)
             stack_tif = stack_tif.astype(bool).astype(np.uint8)
+
+            aux = np.ones((NZ, NY + 30, NX + 30))
+            aux[:, 15:NY + 15, 15:NX + 15] = stack_tif
+            aux *= 255
         
-            print("Saving array of size {} as tif...".format(stack_tif.shape))
+            print("Saving array of size {} as tif...".format(aux.shape))
             filename = os.path.splitext(filename)[0]
             savef = os.path.join(solid_dir, '{}_cryst.tif'.format(filename[:-11]))
-            io.imsave(savef, stack_tif, plugin='tifffile')
+            io.imsave(savef, aux, plugin='tifffile')
             
     def makeMesh(self, path2file, do_clean=False):
         path, file_name = os.path.split(path2file)
