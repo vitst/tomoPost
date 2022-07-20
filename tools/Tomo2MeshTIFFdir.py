@@ -38,18 +38,15 @@ from skimage import io
 __author__ = 'Vitaliy Starchenko'
 
 
-class Tomo2MeshML(pt.AbstractBaseTool):
+class Tomo2MeshTIFFdir(pt.AbstractBaseTool):
     '''
-    Usual Tomo2Mesh modified for ML results from Buki 220617
-    Not generic enough, may be removed later.
-    This tool does copy the crystall binary files and combines them with initial
-    geometry to create a binary solid porous structure which results binary
+    Usual Tomo2Mesh modified to convert TIF with 1 - solid; 0 - pore
+    from a single dir to OBJ. Reads all tif files
     tif files where 255 - solid, 0 - pore
-    Files are copied into the directory tif_solid
     '''
     
     def __init__(self):
-        self.__toolName__ = 'tomo2meshML'
+        self.__toolName__ = 'tomo2meshTIFFdir'
         
         # an array of parameters for current generator
         self.parameters = []
@@ -57,11 +54,11 @@ class Tomo2MeshML(pt.AbstractBaseTool):
         # the format for parameters: [name, initial_value, description
         
         self.parameters.append(
-            ['crystDir', 'crystDir', ':directory with segmented crystal files ']
+            ['sourceDir', 'sourceDir', ':directory with segmented .tif files ']
         )
         
         self.parameters.append(
-            ['solidDir', 'solid', ':directory with binary solid-pore']
+            ['objDir', 'objDir', ':directory with obj surface mesh']
         )
 
     def obj_writer(self, fname, verts, faces):
@@ -157,37 +154,7 @@ class Tomo2MeshML(pt.AbstractBaseTool):
         return bin_image
 
     
-    def makeSolidBinary(self, path2cryst, solid_dir):
-        #tif_files = sorted([f for f in os.listdir(path2cryst)
-        #    if (os.path.isfile( os.path.join(path2cryst, f)) and (".tif" in f) and ("new_solid_" in f) )])
-        tif_files = sorted([f for f in os.listdir(path2cryst)
-            if (os.path.isfile( os.path.join(path2cryst, f)) and (".tif" in f) and ("particles_only" in f) )])
-        
-        for i, filename in enumerate(tif_files):
-            print('\n*********************************************')
-            print('  Processing file {}'.format(filename))
-            print('*********************************************')
-            filen = os.path.join(path2cryst, filename)
-            stack_tif = io.imread(filen, plugin='tifffile')
-            # the difference between ML and my results: cryst colors are invert
-            #stack_tif = np.logical_not(stack_tif.astype(bool)).astype(np.uint8)
-            stack_tif = stack_tif.astype(bool).astype(np.uint8)
-            NZ = stack_tif.shape[0]
-            NY = stack_tif.shape[1]
-            NX = stack_tif.shape[2]
-
-            #aux = np.ones((NZ, NY + 30, NX + 30))
-            #aux[:, 15:NY + 15, 15:NX + 15] = stack_tif
-            aux = stack_tif
-            aux *= 255
-
-        
-            print("Saving array of size {} as tif...".format(aux.shape))
-            filename = os.path.splitext(filename)[0]
-            savef = os.path.join(solid_dir, '{}_cryst.tif'.format(filename[:-11]))
-            io.imsave(savef, aux, plugin='tifffile')
-            
-    def makeMesh(self, path2file, do_clean=False):
+    def makeMesh(self, path2file):
         path, file_name = os.path.split(path2file)
         fname, fext = os.path.splitext(file_name)
         
@@ -198,17 +165,7 @@ class Tomo2MeshML(pt.AbstractBaseTool):
         
         bin_stack_tif = stack_tif.astype(bool).astype(np.int16)
         
-        # clean from isolated and small pixels (optional)
-        if do_clean:
-            bin_stack_tif = self.erode_converge(bin_stack_tif)
-            bin_stack_tif = self.clean_not_attached(bin_stack_tif)
-        
-            print('Saving image after cleaning', flush=True)
-            io.imsave("aux.tif", (255*bin_stack_tif).astype(np.uint8), plugin='tifffile')
-        
-        bin_stack_tif = binary_erosion(bin_stack_tif, iterations=1)
-        
-        # create 1 pixel layer to make close meshes
+        # create 5 pixel layer to make close meshes
         NZ = bin_stack_tif.shape[0]
         NY = bin_stack_tif.shape[1]
         NX = bin_stack_tif.shape[2]
@@ -333,27 +290,23 @@ class Tomo2MeshML(pt.AbstractBaseTool):
             strftime("%Y-%m-%d %H:%M:%S", localtime())), flush=True)
 
         lines = self.read_dict(dictFileName)
-        empty, crystDir, description = \
-            self.check_a_parameter('crystDir', lines)
-        empty, solidDir, description = \
-            self.check_a_parameter('solidDir', lines)
+        empty, sourceDir, description = \
+            self.check_a_parameter('sourceDir', lines)
+        empty, objDir, description = \
+            self.check_a_parameter('objDir', lines)
         
-        os.makedirs(solidDir)
-        
-        ########################################################################
-        # stage 1 read crystall files, combine with ini geometry and save
-        self.makeSolidBinary(crystDir, solidDir)
+        os.makedirs(objDir)
         
         ########################################################################
-        # stage 2 makeMesh
-        tif_files = sorted([f for f in os.listdir(solidDir)
+        # makeMesh
+        tif_files = sorted([f for f in os.listdir(sourceDir)
                             if (os.path.isfile(
-                os.path.join(solidDir, f)) and ".tif" in f)])
+                os.path.join(objDir, f)) and ".tif" in f)])
         for j, filename in enumerate(tif_files):
             print('\n*********************************************', flush=True)
             print('  Processing file {}'.format(filename), flush=True)
             print('*********************************************', flush=True)
-            filen = os.path.join(solidDir, filename)
+            filen = os.path.join(sourceDir, filename)
 
             self.makeMesh(filen)
         

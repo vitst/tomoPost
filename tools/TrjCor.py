@@ -63,6 +63,10 @@ class TrjCor(pt.AbstractBaseTool):
         )
 
     def phase1(self, inputDir, z1, z2):
+        '''
+        Description
+        Extracts voids for later tilt correction
+        '''
         os.makedirs(self.__resDir__)
         # dirrectory for voids
         voids_dir = os.path.join(self.__resDir__, 'voids')
@@ -151,6 +155,10 @@ class TrjCor(pt.AbstractBaseTool):
                 io.imsave(saveVf, crvoid, plugin='tifffile')
     
     def phase2(self, wekaDir):
+        '''
+        Description
+        Use Weka to segment voids
+        '''
         wekaModel = 'weka.model'
         wekaclassifierpath = os.path.join(wekaDir, wekaModel)
         
@@ -173,6 +181,10 @@ class TrjCor(pt.AbstractBaseTool):
             process = subprocess.call(bashCommand, shell=True)
             
     def phase3(self):
+        '''
+        Description
+        Clean binary voids
+        '''
         voids_dir = os.path.join(self.__resDir__, 'voids')
     
         # choose only seg voids to clean
@@ -248,7 +260,10 @@ class TrjCor(pt.AbstractBaseTool):
                           plugin='tifffile')
     
     def phase4(self):
-        # read and check void coordinates
+        '''
+        Description
+        Read and check void coordinates
+        '''
         with open(self.__voidsfile__) as f:
             lines = f.read().splitlines()
         voids = {}
@@ -419,6 +434,10 @@ class TrjCor(pt.AbstractBaseTool):
     ############################################################################
     
     def phase5(self):
+        '''
+        Description
+        Apply alignment to tifs
+        '''
         # trajectory file
         datafile = 'traj.xyz'
         # initial position of cropped part
@@ -549,6 +568,10 @@ class TrjCor(pt.AbstractBaseTool):
             io.imsave(savef, res, plugin='tifffile')
         
     def phase6(self):
+        '''
+        Description
+        If you want to apply ijFFTbandpass filer (usually not)
+        '''
         path_ini = os.path.join(self.__resDir__, 'ini_TR')
         temp_data_dir = "{}_tmp_split".format(path_ini)
         os.mkdir(temp_data_dir)
@@ -634,6 +657,10 @@ class TrjCor(pt.AbstractBaseTool):
         rmtree(temp_data_dir_filtered)
         
     def phase7(self, wekaDir):
+        '''
+        Description
+        Segment 0 time
+        '''
         # file to be segmented
         #path_file_ini = os.path.join(self.__testDir__, 'ini_TR_BP', '02_run06_0015min_trsmd_filtered.tif')
 
@@ -750,7 +777,10 @@ class TrjCor(pt.AbstractBaseTool):
         rmtree(temp_data_dir_class)
         
     def phase7p5(self):
-    
+        '''
+        Description
+        Clean outside capillary using mask
+        '''
         maskDir = 'manualMask'
         if os.path.isdir(maskDir):
             time0fileDir = os.path.join(self.__resDir__, 'ini_TR_BP_cl0')
@@ -829,7 +859,8 @@ class TrjCor(pt.AbstractBaseTool):
         # maxCl = np.max(hist)
         maxClLab = np.argmax(hist) + 1
         print("label of a biggest cluster: {}".format(maxClLab), flush=True)
-        aux[lw != maxClLab] = 0
+        #aux[lw != maxClLab] = 0
+        aux[lw < maxClLab-5] = 0
         return (aux[1:-1, 1:-1, 1:-1]).astype(np.uint8)
     
     
@@ -872,7 +903,8 @@ class TrjCor(pt.AbstractBaseTool):
               flush=True)
         
         bin_image = binary_fill_holes(bin_image).astype(np.uint8)
-        
+       
+        '''
         print("{}  A1 ** Number: {}".format(mark, measurements.sum(bin_image)),
               flush=True)
         
@@ -895,7 +927,8 @@ class TrjCor(pt.AbstractBaseTool):
         
         print("{}  D ** Number: {}".format(mark, measurements.sum(bin_image)),
               flush=True)
-        
+        '''
+
         bin_image = self.clean_not_attached(bin_image)
         
         print("{}  E ** Number: {}".format(mark, measurements.sum(bin_image)),
@@ -910,6 +943,10 @@ class TrjCor(pt.AbstractBaseTool):
 
     
     def phase8(self):
+        '''
+        Description
+        Clean TIF time 0
+        '''
         dir_path = os.path.join(self.__resDir__, 'ini_TR_BP_cl0')
         res_path = os.path.join(self.__resDir__, 'ini_TR_BP_cl0_cl')
         if not os.path.isdir(dir_path):
@@ -930,7 +967,7 @@ class TrjCor(pt.AbstractBaseTool):
             file_path = os.path.join(dir_path, file)
             im_class = io.imread(file_path, plugin='tifffile')
             im_bin = im_class.astype(bool).astype(np.uint8)
-        
+       
             # 1 - is pore space here, 0 - solid
         
             print("######################", flush=True)
@@ -983,12 +1020,17 @@ class TrjCor(pt.AbstractBaseTool):
             io.imsave(file_res, im_bin, plugin='tifffile')
             
     def phase9(self):
-        # subtrack
+        '''
+        Description
+        Subtrack 0 time from others
+        '''
         dir_path = os.path.join(self.__resDir__, 'ini_TR_BP')
         time0fileDir = os.path.join(self.__resDir__, 'ini_TR_BP_cl0_cl')
         if not os.path.isdir(dir_path):
             dir_path = os.path.join(self.__resDir__, 'ini_TR')
             time0fileDir = os.path.join(self.__resDir__, 'ini_TR_cl0_cl')
+            if not os.path.isdir(time0fileDir):
+                time0fileDir = os.path.join(self.__resDir__, 'ini_TR_cl0')
 
         resdir = '{}_subtr'.format(dir_path)
         os.mkdir(resdir)
