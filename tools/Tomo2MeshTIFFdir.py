@@ -271,7 +271,7 @@ class Tomo2MeshTIFFdir(pt.AbstractBaseTool):
         final_mesh = pymesh.form_mesh(scaled_verts, faces)
         
         savefilename = "{}.obj".format(fname)
-        savefilepath = os.path.join('./', savefilename)
+        savefilepath = os.path.join('./', objDir, savefilename)
         
         print("saving file {}".format(savefilename), flush=True)
         
@@ -301,7 +301,8 @@ class Tomo2MeshTIFFdir(pt.AbstractBaseTool):
         # makeMesh
         tif_files = sorted([f for f in os.listdir(sourceDir)
                             if (os.path.isfile(
-                os.path.join(objDir, f)) and ".tif" in f)])
+                os.path.join(sourceDir, f)) and ".tif" in f)])
+
         for j, filename in enumerate(tif_files):
             print('\n*********************************************', flush=True)
             print('  Processing file {}'.format(filename), flush=True)
