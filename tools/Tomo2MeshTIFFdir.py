@@ -154,7 +154,7 @@ class Tomo2MeshTIFFdir(pt.AbstractBaseTool):
         return bin_image
 
     
-    def makeMesh(self, path2file):
+    def makeMesh(self, path2file, objDir):
         path, file_name = os.path.split(path2file)
         fname, fext = os.path.splitext(file_name)
         
@@ -309,7 +309,7 @@ class Tomo2MeshTIFFdir(pt.AbstractBaseTool):
             print('*********************************************', flush=True)
             filen = os.path.join(sourceDir, filename)
 
-            self.makeMesh(filen)
+            self.makeMesh(filen, objDir)
         
         ########################################################################
         # stage 3 rotate and scale the mesh
