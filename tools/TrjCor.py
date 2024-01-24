@@ -769,6 +769,8 @@ class TrjCor(pt.AbstractBaseTool):
             res[current_min_pos:current_max_pos, :, :] = \
                 img[min_sl:max_sl, :, :]
             current_min_pos = current_max_pos
+
+        res = 255*np.logical_not(res.astype(bool)).astype(np.uint8)
     
         savef = os.path.join(path_res, rec_f_name)
         io.imsave(savef, res, plugin='tifffile')
@@ -843,24 +845,45 @@ class TrjCor(pt.AbstractBaseTool):
         sh = bin_image.shape
         sh = np.asarray(sh)
         sh = sh + 2
+
         
         aux = np.ones(shape=(sh))
         aux[1:-1, 1:-1, 1:-1] = bin_image
+
+        totN = measurements.sum(aux)
+        minB = np.min(aux)
+        maxB = np.max(aux)
+        print("total: {}  min: {}  max: {}".format(totN, minB, maxB))
         
         lw, num = measurements.label(aux)
         
         # get a label of the biggest cluster
         minLab = np.min(lw)
         maxLab = np.max(lw)
-        print("labels:  min: {}   max: {}".format(minLab, maxLab), flush=True)
+        #half_maxLab = int(maxLab/10.) + 1
+        half_maxLab = 5
+        print("labels:  min: {}   max: {}   half: {}".format(minLab, maxLab, half_maxLab), flush=True)
         
         hist = measurements.histogram(lw, minLab + 1, maxLab, maxLab - minLab)
-        
+
+        ind = np.argpartition(hist, -half_maxLab)[-half_maxLab:]
+        largest_hist = hist[ind]
+        minHH = np.min(largest_hist)
+        maxHH = np.max(largest_hist)
+        print("minHH: {}  maxHH: {}".format(minHH, maxHH))
+        print("ind: {}  ind1: {}".format(ind, (ind+1)))
+
         # maxCl = np.max(hist)
-        maxClLab = np.argmax(hist) + 1
-        print("label of a biggest cluster: {}".format(maxClLab), flush=True)
+        #maxClLab = np.argmax(hist) + 1
+        #maxVal = hist[0]
+        #print("num in biggest cl: {}".format(maxVal))
+        #print("label of the biggest cluster: {}".format(maxClLab), flush=True)
+        #exit(0)
+
         #aux[lw != maxClLab] = 0
-        aux[lw < maxClLab-5] = 0
+        #aux[lw < half_maxClLab] = 0
+        #aux = np.isin(lw, largest_hist)
+        aux = np.isin(lw, (ind+1))
         return (aux[1:-1, 1:-1, 1:-1]).astype(np.uint8)
     
     
@@ -904,7 +927,6 @@ class TrjCor(pt.AbstractBaseTool):
         
         bin_image = binary_fill_holes(bin_image).astype(np.uint8)
        
-        '''
         print("{}  A1 ** Number: {}".format(mark, measurements.sum(bin_image)),
               flush=True)
         
@@ -913,21 +935,21 @@ class TrjCor(pt.AbstractBaseTool):
         print("{}  A ** Number: {}".format(mark, measurements.sum(bin_image)),
               flush=True)
         
-        bin_image = binary_fill_holes(bin_image).astype(np.uint8)
+        # no effect
+        #bin_image = binary_fill_holes(bin_image).astype(np.uint8)
         
-        print("{}  B ** Number: {}".format(mark, measurements.sum(bin_image)),
-              flush=True)
+        #print("{}  B ** Number: {}".format(mark, measurements.sum(bin_image)),
+        #      flush=True)
         
         bin_image = binary_dilation(bin_image, iterations=2).astype(np.uint8)
         
         print("{}  C ** Number: {}".format(mark, measurements.sum(bin_image)),
               flush=True)
         
-        bin_image = self.erode_converge(bin_image)
+        #bin_image = self.erode_converge(bin_image)
         
-        print("{}  D ** Number: {}".format(mark, measurements.sum(bin_image)),
-              flush=True)
-        '''
+        #print("{}  D ** Number: {}".format(mark, measurements.sum(bin_image)),
+        #      flush=True)
 
         bin_image = self.clean_not_attached(bin_image)
         
@@ -960,11 +982,11 @@ class TrjCor(pt.AbstractBaseTool):
                             if (os.path.isfile(
                 os.path.join(dir_path, f)) and ".tif" in f)])
     
-        for i, file in enumerate(tif_files):
+        for i, file_n in enumerate(tif_files):
             print('\n*********************************************', flush=True)
-            print('  Processing file {}'.format(file), flush=True)
+            print('  Processing file {}'.format(file_n), flush=True)
             print('*********************************************', flush=True)
-            file_path = os.path.join(dir_path, file)
+            file_path = os.path.join(dir_path, file_n)
             im_class = io.imread(file_path, plugin='tifffile')
             im_bin = im_class.astype(bool).astype(np.uint8)
        
@@ -1014,8 +1036,8 @@ class TrjCor(pt.AbstractBaseTool):
                 im_bin[:, mask == 0] = 1
 
             im_bin *= 255
-            
-            file_res = os.path.join(res_path, file)
+            file_n_cl = os.path.splitext(file_n)[0]
+            file_res = os.path.join(res_path, ("{}_cl.tif").format( file_n_cl) )
         
             io.imsave(file_res, im_bin, plugin='tifffile')
             

@@ -92,12 +92,7 @@ class SegmentCryst(pt.AbstractBaseTool):
         z1 = int(z1)
         z2 = int(z2)
 
-        # number of layers the image is split to in Z direction
-        #n_ = int(ags[3])
-
         # make output directoriry
-        #cryst_dir = "{}_cryst".format(inputDir)
-        #os.mkdir(cryst_dir)
         os.mkdir(outputDir)
 
         # make temporary directorires
@@ -133,17 +128,17 @@ class SegmentCryst(pt.AbstractBaseTool):
         # aux variables to the classification files
         i1 = 0
         class_model = ''
-        for i, file in enumerate(data_files):
+        for i, file_n in enumerate(data_files):
             
             if i==0:
                 continue
     
-            current_file_dir = "{}".format(os.path.splitext(file)[0])
+            current_file_dir = "{}".format(os.path.splitext(file_n)[0])
             current_file_dir = os.path.join(temp_data_dir, current_file_dir)
             os.mkdir(current_file_dir)
     
-            print("  Processing: {}".format(file), flush=True)
-            fp = os.path.join(inputDir, file)
+            print("  Processing: {}".format(file_n), flush=True)
+            fp = os.path.join(inputDir, file_n)
             img = io.imread(fp, plugin='tifffile')
     
             print("    Image dimentions:  {}".format(img.shape), flush=True)
@@ -152,7 +147,7 @@ class SegmentCryst(pt.AbstractBaseTool):
             slice_size = round(img.shape[0] / n_)
             for j in range(n_):
                 splitted_file_name = "{}_part{}.tif".format(
-                    os.path.splitext(file)[0], j)
+                    os.path.splitext(file_n)[0], j)
                 savef = os.path.join(current_file_dir, splitted_file_name)
                 bottom = max(0, j * slice_size - 5)
                 top = min(img.shape[0], (j + 1) * slice_size + 5)
@@ -174,19 +169,19 @@ class SegmentCryst(pt.AbstractBaseTool):
             print("tiff file: {}   weka model file: {}".
                   format(current_file_dir, class_model), flush=True)
     
-            print("  Classify files: {}".format(file), flush=True)
+            print("  Classify files: {}".format(file_n), flush=True)
             bashCommand = "java -Xmx100G  bsh.Interpreter wekaClsfc3D.bsh {} {} {}". \
                 format(current_file_dir, class_split_data_dir, class_model)
             print("bash: {}".format(bashCommand), flush=True)
             process = subprocess.call(bashCommand, shell=True)
     
-            rec_f_name = "{}_seg.tif".format(os.path.splitext(file)[0])
+            rec_f_name = "{}_seg.tif".format(os.path.splitext(file_n)[0])
             res = np.zeros(shape=(cur_shape), dtype=np.uint8)
             print("  Reconstructing: {}\n".format(rec_f_name), flush=True)
             current_min_pos = 0
             for j in range(n_):
                 spl_rec_f_name = "{}_part{}_seg.tif".format(
-                    os.path.splitext(file)[0], j)
+                    os.path.splitext(file_n)[0], j)
                 # spl_rec_f_name = "{}_part{}.tif".format(os.path.splitext(file)[0], j)
                 fp = os.path.join(class_split_data_dir, spl_rec_f_name)
                 img = io.imread(fp, plugin='tifffile')

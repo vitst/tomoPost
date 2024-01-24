@@ -160,8 +160,21 @@ class Tomo2MeshML(pt.AbstractBaseTool):
     def makeSolidBinary(self, path2cryst, solid_dir):
         #tif_files = sorted([f for f in os.listdir(path2cryst)
         #    if (os.path.isfile( os.path.join(path2cryst, f)) and (".tif" in f) and ("new_solid_" in f) )])
+        #tif_files = sorted([f for f in os.listdir(path2cryst)
+        #    if (os.path.isfile( os.path.join(path2cryst, f)) and (".tif" in f) and ("particles_only" in f) )])
+
+        '''
         tif_files = sorted([f for f in os.listdir(path2cryst)
-            if (os.path.isfile( os.path.join(path2cryst, f)) and (".tif" in f) and ("particles_only" in f) )])
+            if ( os.path.isfile( os.path.join(path2cryst, f)) 
+                and (".tif" in f) 
+                and (("solid_" in f) or ("ensemble_" in f)) 
+            )])
+        '''
+        tif_files = sorted([f for f in os.listdir(path2cryst)
+            if ( os.path.isfile( os.path.join(path2cryst, f)) 
+                and (".tif" in f) 
+                and (("new_barite_" in f)) 
+            )])
         
         for i, filename in enumerate(tif_files):
             print('\n*********************************************')
@@ -176,15 +189,18 @@ class Tomo2MeshML(pt.AbstractBaseTool):
             NY = stack_tif.shape[1]
             NX = stack_tif.shape[2]
 
+            # these two need to be commented for barite crystals only
             #aux = np.ones((NZ, NY + 30, NX + 30))
-            #aux[:, 15:NY + 15, 15:NX + 15] = stack_tif
+            #aux[:, 15:NY + 15, 15:NX + 15] = stack_tif[:,:,:]
+
             aux = stack_tif
             aux *= 255
 
         
             print("Saving array of size {} as tif...".format(aux.shape))
             filename = os.path.splitext(filename)[0]
-            savef = os.path.join(solid_dir, '{}_cryst.tif'.format(filename[:-11]))
+            #savef = os.path.join(solid_dir, '{}_cryst.tif'.format(filename[:-11]))
+            savef = os.path.join(solid_dir, '{}.tif'.format(filename[:]))
             io.imsave(savef, aux, plugin='tifffile')
             
     def makeMesh(self, path2file, do_clean=False):
@@ -272,9 +288,12 @@ class Tomo2MeshML(pt.AbstractBaseTool):
         #dx = - x1
         #dy = - (halfLy + y1)
         #dz = - (halfLz + z1)
-        dx = - (halfLx + x1)
-        dy = - (halfLy + y1)
-        #dz = - z1
+
+        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        #dx = - (halfLx + x1)
+        #dy = - (halfLy + y1)
+        dx = -659.4999451637268
+        dy = -658.0449051856995
         dz = 0.0
 
         ftr = open("translate.dat", "a")
